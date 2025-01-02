@@ -1,0 +1,5 @@
+{
+    "ignore": [
+        "/opt/bitnami/projects/server/services/*"
+    ]
+}

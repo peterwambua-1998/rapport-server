@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ai-app-49d1e",
+  "private_key_id": "a7f07b6af0e2bf36f7d4e4568a3c76678772d55e",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC44N0ReiB88SXm\nCmEO/lLGS/5DXbZAx939elLSvoImRxN/fv8ebaDHHatNWKm77vo7cFQ7EXl6gjxB\nAAeVdVNpDaW5NpPVU5lO1I53wCXFbrXqedNshlZMvpshRcpDI7hjn3xQt6Y6td8C\neIYBh3DiCLJT+ifc6o4TasL3xhXimX+cXCOuKlnihw/0F3OtDhuyFgNLxYc15D1N\n3LOgYCjD+1W+rwIRKE2Fr2hJQS90/TCva0lZTX/BfqWVrKNTxYTWOWONcibajqlf\nxlW4wCIdjIvnk7yCPveZ/4qVoGDhDQQAV6vXtV9jjauhHpEtl1mSNSS0kVzf1HBw\n7+T8FqPhAgMBAAECgf85hgx991CuVFoKHAk+b8+z9xiSP9swYImn/DZS0moO9Q6I\nWBj1aJ0KQ51OLrR54rBbunosDjoC7iBbLNhqT+Xo+ziLcj6g8GvgrvN9xUGsmON3\nkXBU1BUtaVwqG6p6r5i5jgOgLYQyrJ8jQzWCkw4gMqg2Kh+zRIMEEXjTi51+skZ1\nQwko2TYRUC9IqKzMkUIhERacE0PXLdpLsQULD/551Ji4NIvIHuGhcRieOfd2CGFB\nAnjzuvS2VO4B6ToukaBlNya8YhrVLX8V2KMCPqibZduTfdqAZFELeOelb7hWexah\nq9rA3oELdoo5+nxmGpdrb1bfXZcvQiKeXeZ8fiECgYEA3829W+PC2JoYa1rZniyw\nJp6wAHZYXZdc4Yo1xvfz3cZjcdREv9XNN0laYsBD08NnETKn1G3mDTHp86eOu8GT\nFWbRtDzNj0LFmB5BJW/67gFv3j28A8T0q+XzAvR4j+56QB20gQJBzFTeEeXuRoKA\n/VlZsuWKMdwv+9Tch4PNVOkCgYEA03mUardehp7hx6PBvIsVdb3tSPj+zyiouwbB\nOqTx689O+UNvNwZop4mKL/0jCOOmtCLhwW9DpgthbzO6Qr68A0QngP5UgmEbM0Te\ndtaQIW0ks+1ytavQYYn1NI1ksSnM2kTQ0zAU7PPYHr8Vxi4TDcbNYrqXawHnKrbk\nlDUjXDkCgYEAjJQhU6z3YTM6D4UbmN2dMEURbNjpnLBNKWa1bOunBTFumbuqC43y\nv72Vxt3aPRRKk2TsQuVdUgB+Ygxn/cwT5aeWJc7jmA9rKqgmZ6u1RPcmG8VPala3\nEZr5UGvbpx03MTr3fOm8ButwKnHxf9zNxVXwoAzLB5K1mUwV0hGaUrECgYEAnRFc\nLrbrOkmfoEv8hTE4Sy85ok1t1Cd6yw6FTi1ckax0F6cCX3gfGvCI9oOpFd0f4ANY\ncfdV42nogFOHMDPCKRrhzGkaE4xUS4wHP3S1sF4EOK9P16c5Knjw6otqEjvdrvAV\nugWoRSYHiy6Z2Yw3ErBps76q4AuVyp/0vi+Jh+ECgYEAg8tyV1xBGkczdvymKc7F\nXQez9dhayulglErmVhwJKbMYvxVHp93+rHX7gvTPDrRE7ga+tSezaCA17LTLwcRz\nsdiNbn3fEOer4PMiHrvHpxqLZ9PP0t1q7gktL1vBRXr45mtmbOM6y6pIV6BSrXDK\noqePC4qMb6oFVMJxBfjbwRk=\n-----END PRIVATE KEY-----\n",
+  "client_email": "peter-video-api@ai-app-49d1e.iam.gserviceaccount.com",
+  "client_id": "108508099695523430601",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/peter-video-api%40ai-app-49d1e.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
