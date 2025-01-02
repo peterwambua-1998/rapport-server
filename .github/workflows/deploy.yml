@@ -1,0 +1,33 @@
+name: Deploy Nodejs Development Server
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to Debian server
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: bitnami
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Navigate to your project directory
+          cd /opt/bitnami/projects/server
+          
+          # Ensure we have the latest code
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # Install dependencies
+          export PATH="/opt/bitnami/nodejs/bin:$PATH"
+          npm install
+          
+          # Restart the PM2 dev process
+          pm2 restart server  # replace 'client' with your actual PM2 process name
