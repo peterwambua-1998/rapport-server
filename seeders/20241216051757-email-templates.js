@@ -17,12 +17,9 @@ module.exports = {
                 <p style="font-size: 16px; color: #555; line-height: 1.5;">
                   Thanks for your interest in joining TalentMatch! To complete your registration, we need you to verify your email address.
                 </p>
-                <a href="{{verificationLink}}" 
-                  style="display: inline-block; text-decoration: none; background-color: #1DA1F2; color: white; padding: 12px 24px; font-size: 16px; border-radius: 5px; margin: 20px 0; font-weight: bold;">
-                  Verify Email
-                </a>
+                <p style="font-size: 16px; color: #555; line-height: 1.5;">Verification code: {{verificationLink}}</p>
                 <p style="font-size: 14px; color: #777; margin-top: 10px;">
-                  Please note that this link will expire in 12h.
+                  Please note that this code will expire in 12h.
                 </p>
                 <p style="font-size: 14px; color: #777;">
                   If you did not make this request, you do not need to do anything.

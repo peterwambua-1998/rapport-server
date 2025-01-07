@@ -59,9 +59,11 @@ module.exports = {
       },
       profileVisible: {
         type: Sequelize.BOOLEAN,
+        defaultValue: true,
       },
       activeStatus: {
         type: Sequelize.BOOLEAN,
+        defaultValue: true,
       },
       terms: {
         type: Sequelize.BOOLEAN,

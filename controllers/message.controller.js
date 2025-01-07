@@ -1,5 +1,13 @@
 const { Message, Conversation, User, Project, Schedule, RecruiterProfile, JobSeeker } = require("../models");
 
+exports.startConversation = async (req, res) => {
+  try {
+    
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 exports.create = async (req, res) => {
   try {
     const { conversationId, message } = req.body;

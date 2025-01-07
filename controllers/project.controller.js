@@ -5,7 +5,6 @@ const { matchCandidates } = require("../services/projectMatching");
 const createProject = async (req, res) => {
   try {
     const { name, description } = req.body;
-
     const candidates = await User.findAll({
       where: { role: "job_seeker" },
       include: [
@@ -36,6 +35,7 @@ const createProject = async (req, res) => {
         },
       ],
     });
+    const matchedCandidates = await matchCandidates(candidates, description)
 
     const project = await Project.create({
       userId: req.user.id,
@@ -44,8 +44,8 @@ const createProject = async (req, res) => {
       status: false,
     });
 
-    // const matchedCandidates = await matchCandidates(candidates, description)
-    const storeMatched = await MatchedCandidate.bulkCreate(candidates.map((candidate) => ({
+   
+    const storeMatched = await MatchedCandidate.bulkCreate(matchedCandidates.candidates.map((candidate) => ({
       ProjectId: project.id,
       UserId: candidate.id,
       Status: "Screening",

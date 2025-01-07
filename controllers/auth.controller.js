@@ -85,9 +85,10 @@ exports.registerJobseeker = async (req, res) => {
       skills,
       aboutYourself,
       termsAccepted,
+      ioUserId, // represent user id from socket
     } = req.body;
 
-    const verificationToken = crypto.randomBytes(20).toString('hex');
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
     const password = "password123";
     const files = req.files;
     let video_path, video_name;
@@ -151,12 +152,13 @@ exports.registerJobseeker = async (req, res) => {
       about: aboutYourself,
       videoUrl: video_path,
       videoAnalysis: vid,
+      backgroundColor: "#205295",
       terms: termsAccepted ? termsAccepted : false,
     });
 
     if (files) {
       if (files.video) {
-        await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id })
+        await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id, ioUserId, router: 'register' });
       }
     }
 
@@ -172,7 +174,7 @@ exports.registerJobseeker = async (req, res) => {
 
     await sendEmail(user.email, "registration", {
       name: user.name,
-      verificationLink: `${process.env.FRONTEND_URL}/jobseeker/verify/${verificationToken}`,
+      verificationLink: verificationToken,
     });
 
     res
@@ -287,10 +289,21 @@ exports.verifyEmail = async (req, res) => {
     }
 
     user.verificationToken = null;
+    user.isVerified = true;
     await user.save();
-    res
-      .status(200)
-      .json({ success: true, message: "Email verification successfull", user });
+
+    let authUser = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    }
+    req.login(authUser, function (err) {
+      if (err) {
+        return res.json({ status: false, msg: 'error occurred' }).status(500);
+      }
+      res.json({ status: true, msg: 'Email verification successfull', user: user }).status(200)
+    });
   } catch (error) {
     console.error(error);
     res.status(500).send('An error occurred during verification.');
@@ -360,3 +373,4 @@ exports.getCurrentUser = async (req, res) => {
 
   return res.json({ user: user });
 }
+

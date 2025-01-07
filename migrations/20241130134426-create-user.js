@@ -30,6 +30,10 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: true,
       },
+      video_path: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
       resetPasswordToken: {
         type: Sequelize.STRING,
         allowNull: true,

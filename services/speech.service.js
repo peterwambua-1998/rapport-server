@@ -5,15 +5,18 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const OpenAI = require("openai");
+
 const {
     JobSeeker,
 } = require("../models");
+const { sendMessageIo } = require('./socket.service');
 
 const openai = new OpenAI({
     apiKey: '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',
 });
 
-const gcCredentialsPath = '/opt/bitnami/projects/server/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
+const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
+// 
 process.env.GOOGLE_APPLICATION_CREDENTIALS = gcCredentialsPath;
 
 const storage = new Storage();
@@ -22,14 +25,22 @@ const bucketName = 'ai-app-49d1e.appspot.com';
 
 const speechQueue = new Bull('speech')
 
+
 const addSpeechToQueue = async (speech) => {
     try {
         if (!speech.videoPath || !speech.fileName) {
             throw new Error('Missing required parameters: videoPath or fileName');
         }
-        console.log(speech.videoPath)
+
         const job = await speechQueue.add(speech);
+        const { userId, ioUserId, router } = speech;
+
+        router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
+
         console.log(`Job added to queue with ID: ${job.id}`);
+
         return job;
     } catch (error) {
         console.error('Error adding job to queue:', error);
@@ -37,11 +48,34 @@ const addSpeechToQueue = async (speech) => {
     }
 };
 
-async function uploadToGCS(filePath, fileName) {
+
+function extractAudio(videoPath, audioPath, userId, ioUserId, router) {
+    return new Promise((resolve, reject) => {
+        const command = `ffmpeg -i "${videoPath}" -ac 1 -ar 16000 -q:a 0 -map a "${audioPath}"`;
+        exec(command, (error) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(audioPath);
+                router == 'register' ?
+                    sendMessageIo(ioUserId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null }) :
+                    sendMessageIo(userId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null });
+            }
+        });
+    });
+}
+
+
+async function uploadToGCS(filePath, fileName, userId, ioUserId, router) {
     try {
         await storage.bucket(bucketName).upload(filePath, {
             destination: fileName,
         });
+
+        router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null });
+
         return `gs://${bucketName}/${fileName}`;
     } catch (error) {
         console.log(error)
@@ -50,20 +84,7 @@ async function uploadToGCS(filePath, fileName) {
 }
 
 
-function extractAudio(videoPath, audioPath) {
-    return new Promise((resolve, reject) => {
-        const command = `ffmpeg -i "${videoPath}" -ac 1 -ar 16000 -q:a 0 -map a "${audioPath}"`;
-        exec(command, (error) => {
-            if (error) {
-                reject(error);
-            } else {
-                resolve(audioPath);
-            }
-        });
-    });
-}
-
-async function transcribeAudio(gcsUri) {
+async function transcribeAudio(gcsUri, userId, ioUserId, router) {
     const request = {
         audio: {
             uri: gcsUri,
@@ -76,7 +97,14 @@ async function transcribeAudio(gcsUri) {
     };
 
     console.log('Transcribing audio...');
+    router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
     const [operation] = await speechClient.longRunningRecognize(request);
+
+    router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null });
     const [response] = await operation.promise();
 
     const transcription = response.results
@@ -89,7 +117,7 @@ async function transcribeAudio(gcsUri) {
 }
 
 
-const extractSkillsAndExperienceAI = async (transcription) => {
+const extractSkillsAndExperienceAI = async (transcription, userId, ioUserId, router) => {
     try {
         const response = await openai.chat.completions.create({
             messages: [
@@ -104,6 +132,12 @@ const extractSkillsAndExperienceAI = async (transcription) => {
                             "Clear articulation of complex technical concepts",
                             "Engaging storytelling ability when describing past experiences",
                             "Professional appearance and presentation skills"
+                        ],
+                        "recommendations": [
+                            "Consider adding specific metrics to quantify your achievements",
+                            "Include more examples of cross-functional leadership",
+                            "Highlight your technical expertise more prominently",
+                            "Add recent industry certifications or training"
                         ],
                         "keywords and expertise": [
                             "Product Management",
@@ -175,6 +209,11 @@ const extractSkillsAndExperienceAI = async (transcription) => {
         });
 
         const assistantResponse = response.choices[0].message.content;
+
+        router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null });
+
         return assistantResponse;
     } catch (error) {
         console.error("Error generating LLM response:", error);
@@ -184,21 +223,20 @@ const extractSkillsAndExperienceAI = async (transcription) => {
 
 // my job processor
 const speechService = async (job) => {
+    const { videoPath, fileName, userId, ioUserId, router } = job.data;
     try {
-        const { videoPath, fileName, userId } = job.data;
-        console.log('videoPath===', videoPath)
-        const audioPath = path.join('/opt/bitnami/projects/server/uploads/ai_videos', `${path.parse(fileName).name}.wav`);
 
-        await extractAudio(videoPath, audioPath);
+        const audioPath = path.join(process.cwd() + '/uploads/ai_videos/' + `${path.parse(fileName).name}.wav`);
+        await extractAudio(videoPath, audioPath, userId, ioUserId, router);
 
-        const gcsUri = await uploadToGCS(audioPath, `${path.parse(fileName).name}.wav`);
+        const gcsUri = await uploadToGCS(audioPath, `${path.parse(fileName).name}.wav`, userId, ioUserId, router); 
 
-        const transcription = await transcribeAudio(gcsUri)
+        const transcription = await transcribeAudio(gcsUri, userId, ioUserId, router); 
 
-        const result = await extractSkillsAndExperienceAI(transcription);
+        const result = await extractSkillsAndExperienceAI(transcription, userId, ioUserId, router);
 
-        const jobseeker = await JobSeeker.findOne({where: {userId: userId}});
-        jobseeker.update({
+        const jobseeker = await JobSeeker.findOne({ where: { userId: userId } });
+        await jobseeker.update({
             videoAnalysis: result
         })
 
@@ -207,13 +245,27 @@ const speechService = async (job) => {
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);
+        router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'completed', percentage: 100, error: null }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'completed', percentage: 100, error: null });
+
     } catch (error) {
-        console.log(error)
+        console.error('Error processing job:', error);
+        router == 'register' ?
+            sendMessageIo(ioUserId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message }) :
+            sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message });
+        throw error;
     }
 }
 
 
 speechQueue.process(speechService)
 
-module.exports = addSpeechToQueue;
+speechQueue.on('failed', (job, err) => {
+    const { userId, ioUserId, router } = job.data;
+    router == 'register' ?
+        sendMessageIo(ioUserId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message }) :
+        sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message });
+});
 
+module.exports = addSpeechToQueue;

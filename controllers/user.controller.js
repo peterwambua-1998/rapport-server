@@ -9,7 +9,10 @@ const {
   VisibilitySetting,
   Country,
   UserLinkedProfile,
-  Company
+  Company,
+  EducationLevel,
+  YearsOfExperience,
+  SkillLevel
 } = require("../models");
 const addSpeechToQueue = require("../services/speech.service");
 
@@ -64,7 +67,20 @@ exports.getJobSeekers = async (req, res) => {
       include: [
         {
           model: JobSeeker,
-          include: [{ model: Industry }],
+          include: [
+            {
+              model: YearsOfExperience,
+            },
+            {
+              model: SkillLevel,
+            },
+            {
+              model: Industry,
+            },
+            {
+              model: EducationLevel,
+            },
+          ],
         },
         {
           model: JobseekerSkills,
@@ -125,6 +141,12 @@ exports.profile = async (req, res) => {
         include: [
           {
             model: JobSeeker,
+            include: [
+              { model: Industry },
+              { model: EducationLevel },
+              { model: SkillLevel },
+              { model: YearsOfExperience }
+            ],
           },
           {
             model: VisibilitySetting,
@@ -171,7 +193,7 @@ exports.updateAdminProfile = async (req, res) => {
 
     const { name, email } = req.body;
     await user.update({ name: name, email: email, avatar: avatar });
-    return res.status(200).json({success:true, message:"Profile updated successfully"});
+    return res.status(200).json({ success: true, message: "Profile updated successfully" });
   } catch (error) {
     console.log(error)
     console.error("Error updating profile:", error);
@@ -195,7 +217,6 @@ exports.updateProfile = async (req, res) => {
       lastName,
       email,
       aboutYourself,
-      specialization,
     } = req.body;
     const name = firstName + " " + lastName;
 
@@ -231,7 +252,6 @@ exports.updateProfile = async (req, res) => {
         first_name: firstName,
         last_name: lastName,
         about: aboutYourself,
-        specialization: specialization,
         profile_image_url: profilePhoto,
         cover_photo_url: cover_photo_url,
       },
@@ -305,7 +325,7 @@ exports.updateSeekerProfile = async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
-
+    console.log(req.files.profilePicture)
     // Find the User based on userId
     const user = await User.findOne({
       where: { id: userId },
@@ -323,6 +343,7 @@ exports.updateSeekerProfile = async (req, res) => {
     const profile = await JobSeeker.findOne({
       where: { userId: userId },
     });
+
     let vid = {
       "analysis": "",
       "highlights": [],
@@ -332,16 +353,18 @@ exports.updateSeekerProfile = async (req, res) => {
       "experiences": []
     }
 
-    let video_path = profile?.videoUrl || "";
-    let profile_path = profile?.profilePictureUrl;
-    let results = profile?.videoAnalysis || vid;
+    let profile_path;
+    let video_path;
+    // let results = profile?.videoAnalysis || vid;
     if (files) {
+      if (files.profilePicture) {
+        profile_path = files.profilePicture[0].path
+      }
       if (files.video) {
         let video_name = files.video[0].filename;
         video_path = files.video[0].path;
-        let ai_video_path = "/opt/bitnami/projects/server/" + files.video[0].path;
-
-        await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id })
+        // let ai_video_path = "/opt/bitnami/projects/server/" + files.video[0].path;
+        await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id, ioUserId: null, router: 'profile' });
       }
     }
 
@@ -457,7 +480,10 @@ exports.updateSeekerProfile = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const jobseek = await JobSeeker.findOne({ where: { userId: req.user.id } });
+    const jobseek = await JobSeeker.findOne({
+      where: { userId: req.user.id },
+
+    });
     const skills = await JobseekerSkills.findAll({ where: { userId: req.user.id } });
     const profile = (jobseek && skills) ? true : false;
     return res.status(200).json(profile);
@@ -473,6 +499,12 @@ exports.getJobSeekerById = async (req, res) => {
       include: [
         {
           model: JobSeeker,
+          include: [
+            { model: Industry },
+            { model: EducationLevel },
+            { model: SkillLevel },
+            { model: YearsOfExperience }
+          ],
         },
         {
           model: VisibilitySetting,
