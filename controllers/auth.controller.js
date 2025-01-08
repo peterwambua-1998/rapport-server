@@ -350,27 +350,6 @@ exports.logout = async (req, res) => {
 
 
 exports.getCurrentUser = async (req, res) => {
-  if (!req.user) {
-    return res.json({ user: {} });
-  }
-
-  let user = await User.findByPk(req.user.id, {
-    attributes: ['id', 'name', 'email', 'role', 'avatar'],
-  });
-
-  if (user.role != 'admin') {
-    user = await User.findByPk(req.user.id, {
-      include: [
-        {
-          model: UserLinkedProfile,
-          as: 'linkedProfile',
-          attributes: ['picture'],
-        },
-      ],
-      attributes: ['id', 'name', 'email', 'role', 'avatar'],
-    });
-  }
-
-  return res.json({ user: user });
+  return res.json({ user: req.user });
 }
 
