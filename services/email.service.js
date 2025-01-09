@@ -42,12 +42,12 @@ const index = async () => {
 }
 
 const transporter = nodemailer.createTransport({
-  host: config.email.host,
-  port: config.email.port,
-  secure: config.email.secure,
+  host: "mail.kodensolutions.com",
+  port: 465,
+  secure: true,
   auth: {
-    user: config.email.auth.user,
-    pass: "Utah@2024#",
+    user: "test@kodensolutions.com",
+    pass: "Tester2025",
   },
 });
 
