@@ -1,4 +1,4 @@
-// const express = require("express");
+const multer = require("multer");
 const {
   register,
   login,
@@ -9,13 +9,27 @@ const {
   logout,
   setNewPassword,
   verifyEmail, 
-  getCurrentUser
+  getCurrentUser,
+  resendVerification,
 } = require("../controllers/auth.controller");
-
+const { processFile, storeProfessionalInfo, storePersonalInfo, storeEducation, storeExperience, storeCerts, storeSkills, getJobSeekerInfo, callBackLinkedInd, handleLinkedIn } = require("../controllers/dataSource.controller")
 const uploadImagesMiddleware = require("../middleware/jobseekerMiddleware");
 const express = require("express");
 const passport = require("passport");
 const router = express.Router();
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+router.post('/file/process', upload.single('cv'), processFile);
+router.post('/professional-info/store', storeProfessionalInfo);
+router.post('/personal-info/store', uploadImagesMiddleware, storePersonalInfo);
+router.post('/education-info/store', storeEducation);
+router.post('/experience-info/store', storeExperience)
+router.post('/cert-info/store', storeCerts)
+router.post('/skills-info/store', storeSkills)
+router.get('/profile/job-seeker', getJobSeekerInfo)
+router.get('/data-source/linkedin/callback', callBackLinkedInd)
 
 router.get("/me", getCurrentUser);
 
@@ -60,6 +74,7 @@ router.post("/jobseeker-register", uploadImagesMiddleware, registerJobseeker);
 router.post("/forgot-password", forgotPassword);
 router.put("/reset-password/:token", resetPassword);
 router.put("/verify-email/:token", verifyEmail);
+router.post("/resend/verification", resendVerification);
 router.put("/set-password/:id/set", setNewPassword);
 router.put("/change-password", changePassword);
 router.post("/logout", function (req, res, next) {

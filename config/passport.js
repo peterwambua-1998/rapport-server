@@ -2,9 +2,8 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 var LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
 const bcrypt = require("bcryptjs");
-const { User, UserLinkedProfile, JobSeeker, RecruiterProfile } = require("../models");
+const { User, RecruiterProfile } = require("../models");
 const { default: axios } = require("axios");
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
@@ -15,18 +14,11 @@ passport.use(
       try {
         const user = await User.findOne({
           where: { email, role: req.body.role },
-          attributes: ['id', 'name', 'email', 'role', 'avatar', 'password', 'isVerified'],
+          attributes: ['id', 'fName', 'lName', 'email', 'role', 'avatar', 'isVerified', 'password', 'linkedinId'],
         });
 
         if (!user) {
           return done({ message: "Incorrect email or password.", needsPasswordSetup: false }, null);
-        }
-
-        if (!user.isVerified && user.role == "job_seeker") {
-          const plainUser = user.toJSON();
-          delete plainUser.password;
-          delete plainUser.isVerified;
-          return done({ message: "Please set your password to complete your registration.", needsPasswordSetup: true, user: plainUser }, null);
         }
 
         const passwordMatch = await bcrypt.compare(password, user.password);
@@ -34,9 +26,14 @@ passport.use(
           return done({ message: "Incorrect email or password.", needsPasswordSetup: false }, null);
         }
 
-        const plainUser = user.toJSON();
-        delete plainUser.password;
-        delete plainUser.isVerified;
+        const plainUser = {
+          id: user.id,
+          username: user.fName,
+          email: user.email,
+          role: user.role,
+          linkedIn: user.linkedinId ? true : false
+        };
+        
         return done(null, plainUser);
       } catch (err) {
         return done(err);
@@ -55,40 +52,54 @@ passport.use(
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
-      req.session.accessToken = accessToken;
+      console.log(profile);
+
       process.nextTick(async () => {
-        const { id, email, displayName } = profile;
-        const { state } = req.query;
-        const { role } = JSON.parse(state);
-        const photoUrl = profile.picture ? profile.picture : null;
-        const { locale, email_verified, given_name, family_name } = profile._json;
-        console.log(role)
+        try {
+          const { id, email } = profile;
+          const { state } = req.query;
+          const { role } = JSON.parse(state);
+          const photoUrl = profile.picture ? profile.picture : null;
+          const { locale, given_name, family_name } = profile._json;
 
-        let photoPath = await linkedInPictureDownload(photoUrl);
+          let photoPath = await linkedInPictureDownload(photoUrl);
 
-        let user = await User.findOne({ where: { email: email } });
-        if (!user) {
-          user = await User.create({
-            name: displayName,
-            email,
-            role,
-            linkedinId: id,
-            linkedinIdLogin: true,
-            avatar: photoPath,
-            isVerified: true,
-          });
-
-          if (role === "recruiter") {
-            await RecruiterProfile.create({
-              user_id: user.id,
-              first_name: given_name,
-              last_name: family_name,
-              country: locale.country,
+          let user = await User.findOne({ where: { email: email } });
+          if (!user) {
+            user = await User.create({
+              fName: given_name,
+              lName: family_name,
+              email,
+              role,
+              linkedinId: id,
+              linkedinIdLogin: true,
+              avatar: photoPath,
+              isVerified: true,
             });
+
+            if (role === "recruiter") {
+              await RecruiterProfile.create({
+                user_id: user.id,
+                first_name: given_name,
+                last_name: family_name,
+                country: locale.country,
+              });
+            }
           }
+
+          let u = {
+            id: user.id,
+            username: user.fName,
+            email: user.email,
+            role: user.role,
+            linkedIn: user.linkedinId ? true : false
+          }
+          return done(null, u);
+        } catch (err) {
+          console.log(err)
+          return done(err);
         }
 
-        return done(null, user);
       });
     }
   )
@@ -101,6 +112,7 @@ passport.serializeUser(function (user, cb) {
       username: user.username,
       email: user.email,
       role: user.role,
+      linkedIn: user.linkedIn
     });
   });
 });

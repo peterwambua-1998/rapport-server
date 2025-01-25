@@ -6,7 +6,9 @@ module.exports = {
     const hashedPassword = await bcrypt.hash("12345678", 10);
     await queryInterface.bulkInsert("Users", [
       {
-        name: "John Doe",
+        fName: "John",
+        lName: "Doe",
+        phone:  "+1 (322) 903-4551",
         email: "johndoe@gmail.com",
         password: hashedPassword,
         role: "admin",
@@ -22,7 +24,6 @@ module.exports = {
       //   createdAt: new Date(),
       //   updatedAt: new Date(),
       // },
-    
     ]);
   },
 

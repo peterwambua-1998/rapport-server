@@ -12,12 +12,10 @@ exports.socketConnection = (server) => {
 
         if (userId) {
             socket.join(userId); // Join the user to a room identified by their userId
-            console.log(`User ${userId} connected and joined room`);
         }
 
         // Optional: Handle user disconnection
         socket.on('disconnect', () => {
-            console.log(`User ${userId} disconnected`);
         });
     });
 };

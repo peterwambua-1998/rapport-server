@@ -23,7 +23,6 @@ exports.register = async (req, res) => {
     companyId,
     country,
   } = req.body;
-  console.log(req.body)
   try {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -51,7 +50,6 @@ exports.register = async (req, res) => {
 
     req.login(user, function (err) {
       if (err) {
-        console.log(err)
         return res.json({ status: false, msg: "error occurred" }).status(500);
       }
       res
@@ -59,136 +57,81 @@ exports.register = async (req, res) => {
         .status(200);
     });
   } catch (error) {
-    console.log(error);
     return res
       .status(400)
       .json({ success: false, error: "Sorry error occured!!!" });
   }
 };
 
-// Registration for jobseekers
+
+
 exports.registerJobseeker = async (req, res) => {
   try {
-    const {
-      fullName,
-      email,
-      phone,
-      address,
-      city,
-      state,
-      zipCode,
-      professionalTitle,
-      industry,
-      educationLevel,
-      yearsOfExperience,
-      skillLevel,
-      skills,
-      aboutYourself,
-      termsAccepted,
-      ioUserId, // represent user id from socket
-    } = req.body;
-
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-    const password = "password123";
-    const files = req.files;
-    let video_path, video_name;
+    const { fName, mName, lName, email, phone, password } = req.body;
 
     // Check for existing user
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: "Email already in use" });
+      return res.status(400).json({ error: "Email already in use!" });
     }
 
+    // Check for existing phone
     const existingPhone = await JobSeeker.findOne({ where: { phone } });
     if (existingPhone) {
-      return res.status(400).json({ error: "Phone already in use" });
+      return res.status(400).json({ error: "Phone already in use!" });
     }
 
-    if (files) {
-      profile_path = files.profilePicture ? files.profilePicture[0].path : "";
-    }
-
-    console.log(files)
+    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
 
     const user = await User.create({
-      name: fullName,
+      fName,
+      mName,
+      lName,
       email,
+      phone,
       password,
       role: "job_seeker",
       verificationToken,
       isVerified: false,
-      avatar: profile_path
-    });
-
-    let vid = {
-      "analysis": "",
-      "highlights": [],
-      "keywords and expertise": [],
-      "strengths": [],
-      "soft skills": [],
-      "experiences": []
-    }
-
-    if (files) {
-      if (files.video) {
-        video_name = files.video[0].filename;
-        video_path = files.video[0].path;
-      }
-    }
-
-    await JobSeeker.create({
-      userId: user.id,
-      fullName,
-      phone,
-      professionalTitle,
-      address,
-      city,
-      state,
-      zipCode,
-      industry,
-      educationLevel,
-      yearsOfExperience,
-      skillLevel,
-      about: aboutYourself,
-      videoUrl: video_path,
-      videoAnalysis: vid,
-      backgroundColor: "#205295",
-      terms: termsAccepted ? termsAccepted : false,
-    });
-
-    if (files) {
-      if (files.video) {
-        await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id, ioUserId, router: 'register' });
-      }
-    }
-
-    let skillSet = JSON.parse(skills);
-    const skillsToInsert = skillSet.map((skill) => ({
-      userId: user.id,
-      skillId: skill.id,
-    }));
-
-    await JobseekerSkills.bulkCreate(skillsToInsert, {
-      ignoreDuplicates: true,
     });
 
     await sendEmail(user.email, "registration", {
-      name: user.name,
-      verificationLink: verificationToken,
-    });
+      name: user.fName,
+      verificationLink: verificationToken
+    })
 
-    res
-      .json({ status: true, msg: "registration successful", user: user })
-      .status(200);
+    res.json({ status: true, msg: "registration successful", user: user });
   } catch (error) {
-    console.log(error);
-    res
-      .status(400)
-      .json({ success: false, error: "Error occured please try again!!!" });
+    res.status(400).json({ status: false, error: "Error occurred please try again!" });
   }
-};
+}
 
-// Forgot Password
+exports.resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(400).json({ error: "User not found!" });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await user.update({verificationToken: code})
+
+    await sendEmail(user.email, "registration", {
+      name: user.fName,
+      verificationLink: code
+    })
+
+    res.json({ status: true, msg: "Verification code sent successfully" });
+  } catch (error) {
+    console.log(error)
+    res.status(400).json({ status: false, error: error })
+  }
+}
+
 exports.forgotPassword = async (req, res) => {
   try {
     const { role, email } = req.body;
@@ -294,10 +237,11 @@ exports.verifyEmail = async (req, res) => {
 
     let authUser = {
       id: user.id,
-      username: user.username,
+      name: `${user.fName} ${user.lName}`,
       email: user.email,
       role: user.role,
     }
+
     req.login(authUser, function (err) {
       if (err) {
         return res.json({ status: false, msg: 'error occurred' }).status(500);
@@ -305,7 +249,6 @@ exports.verifyEmail = async (req, res) => {
       res.json({ status: true, msg: 'Email verification successfull', user: user }).status(200)
     });
   } catch (error) {
-    console.error(error);
     res.status(500).send('An error occurred during verification.');
   }
 }
@@ -324,7 +267,6 @@ exports.setNewPassword = async (req, res) => {
       return res.status(400).send('User already verified.');
     }
 
-
     const hashedPassword = await bcrypt.hash(password, 10);
     user.password = hashedPassword;
     user.isVerified = true;
@@ -334,7 +276,6 @@ exports.setNewPassword = async (req, res) => {
       .json({ status: true, msg: "registration successful", user: user })
       .status(200);
   } catch (error) {
-    console.error(error);
     res.status(500).send('An error occurred while setting the password.');
   }
 }
@@ -348,8 +289,127 @@ exports.logout = async (req, res) => {
   });
 };
 
-
 exports.getCurrentUser = async (req, res) => {
   return res.json({ user: req.user });
 }
 
+// Registration for jobseekers
+// exports.registerJobseeker = async (req, res) => {
+//   try {
+//     const {
+//       fullName,
+//       email,
+//       phone,
+//       address,
+//       city,
+//       state,
+//       zipCode,
+//       professionalTitle,
+//       industry,
+//       educationLevel,
+//       yearsOfExperience,
+//       skillLevel,
+//       skills,
+//       aboutYourself,
+//       termsAccepted,
+//       ioUserId, // represent user id from socket
+//     } = req.body;
+
+//     const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+//     const password = "password123";
+//     const files = req.files;
+//     let video_path, video_name;
+
+//     // Check for existing user
+//     const existingUser = await User.findOne({ where: { email } });
+//     if (existingUser) {
+//       return res.status(400).json({ error: "Email already in use" });
+//     }
+
+//     const existingPhone = await JobSeeker.findOne({ where: { phone } });
+//     if (existingPhone) {
+//       return res.status(400).json({ error: "Phone already in use" });
+//     }
+
+//     if (files) {
+//       profile_path = files.profilePicture ? files.profilePicture[0].path : "";
+//     }
+
+//     const user = await User.create({
+//       name: fullName,
+//       email,
+//       password,
+//       role: "job_seeker",
+//       verificationToken,
+//       isVerified: false,
+//       avatar: profile_path
+//     });
+
+//     let vid = {
+//       "analysis": "",
+//       "highlights": [],
+//       "keywords and expertise": [],
+//       "strengths": [],
+//       "soft skills": [],
+//       "experiences": []
+//     }
+
+//     if (files) {
+//       if (files.video) {
+//         video_name = files.video[0].filename;
+//         video_path = files.video[0].path;
+//       }
+//     }
+
+//     await JobSeeker.create({
+//       userId: user.id,
+//       fullName,
+//       phone,
+//       professionalTitle,
+//       address,
+//       city,
+//       state,
+//       zipCode,
+//       industry,
+//       educationLevel,
+//       yearsOfExperience,
+//       skillLevel,
+//       about: aboutYourself,
+//       videoUrl: video_path,
+//       videoAnalysis: vid,
+//       backgroundColor: "#205295",
+//       terms: termsAccepted ? termsAccepted : false,
+//     });
+
+//     if (files) {
+//       if (files.video) {
+//         await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id, ioUserId, router: 'register' });
+//       }
+//     }
+
+//     let skillSet = JSON.parse(skills);
+//     const skillsToInsert = skillSet.map((skill) => ({
+//       userId: user.id,
+//       skillId: skill.id,
+//     }));
+
+//     await JobseekerSkills.bulkCreate(skillsToInsert, {
+//       ignoreDuplicates: true,
+//     });
+
+//     await sendEmail(user.email, "registration", {
+//       name: user.name,
+//       verificationLink: verificationToken,
+//     });
+
+//     res
+//       .json({ status: true, msg: "registration successful", user: user })
+//       .status(200);
+//   } catch (error) {
+//     res
+//       .status(400)
+//       .json({ success: false, error: "Error occured please try again!!!" });
+//   }
+// };
+
+// Forgot Password

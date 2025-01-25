@@ -1,55 +1,20 @@
-const { Skill, User, JobSeeker, YearsOfExperience } = require("../models");
+const { Skill, User, PersonalInformation, ProfessionalInformation, Education, Certification, Experience } = require("../models");
+const generateInterviewQuestions = require("../services/langChain.service");
 const generateLLMResponse = require("../services/openAi.service");
+const { generateQuestions } = require("../services/questions.Service");
 
 exports.getQuestions = async (req, res, next) => {
   try {
-    const id = req.user.id; 
-    const user = await User.findByPk(id, {
-      attributes: {
-        exclude: [
-          "resetPasswordToken",
-          "resetPasswordExpire",
-          "linkedinId",
-          "password",
-        ],
-      },
+    const query = await User.findByPk(req.user.id, {
       include: [
-        {
-          model: JobSeeker,
-          attributes: { exclude: ["createdAt", "updatedAt"] },
-        },
-        {
-          model: Skill,
-          attributes: { exclude: ["createdAt", "updatedAt"] },
-          through: { attributes: [] },
-        },
-      ],
+        { model: Education },
+        { model: Certification },
+        { model: Skill },
+      ]
     });
 
-    if (!user) {
-      return res.status(500).json({ error: "User not found" });
-    }
-
-    if (user.Skills.length == 0) {
-      return res.status(500).json({ mgs: "User has no skills" });
-    }
-
-    // Extract skills for prompt
-    const skillNames = user.Skills.map((skill) => skill.name).join(", ");
-
-    if (!user.JobSeeker) {
-      return res.status(500).json({ mgs: "years of exp not found" });
-    }
-
-    const yearsOfExperience = await YearsOfExperience.findByPk(
-      user.JobSeeker.yearsOfExperience
-    );
-
-    const userProfile = {
-      yearsOfExperience: yearsOfExperience.name,
-      skills: skillNames,
-    };
-    const result = await generateLLMResponse(userProfile);
+    // get questions
+    const result = await generateQuestions(query);
 
     return res.json(result);
   } catch (error) {
@@ -60,5 +25,5 @@ exports.getQuestions = async (req, res, next) => {
 
 exports.getResults = async (req, res, next) => {
   try {
-  } catch (error) {}
+  } catch (error) { }
 };

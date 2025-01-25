@@ -1,3 +1,4 @@
+const { transformProfileInfo, validateProfileInfo } = require("../helpers/functions");
 const {
   User,
   RecruiterProfile,
@@ -12,7 +13,12 @@ const {
   Company,
   EducationLevel,
   YearsOfExperience,
-  SkillLevel
+  SkillLevel,
+  PersonalInformation,
+  ProfessionalInformation,
+  Education,
+  Experience,
+  Certification,
 } = require("../models");
 const addSpeechToQueue = require("../services/speech.service");
 
@@ -480,14 +486,24 @@ exports.updateSeekerProfile = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
   try {
-    const jobseek = await JobSeeker.findOne({
-      where: { userId: req.user.id },
-
+    const query = await User.findByPk(req.user.id, {
+      include: [
+        { model: PersonalInformation },
+        { model: ProfessionalInformation },
+        { model: Education },
+        { model: Experience },
+        { model: Certification },
+        { model: Skill },
+      ]
     });
-    const skills = await JobseekerSkills.findAll({ where: { userId: req.user.id } });
-    const profile = (jobseek && skills) ? true : false;
-    return res.status(200).json(profile);
+
+    const profileInfo = transformProfileInfo(query);
+    let profile = await validateProfileInfo(profileInfo);
+    let valid = profile.isValid;
+    return res.status(200).json(valid);
   } catch (error) {
+    console.log(error);
+    
     return res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -528,3 +544,4 @@ exports.getJobSeekerById = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 }
+

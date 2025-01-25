@@ -19,8 +19,17 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: "CASCADE",
       });
 
-      User.belongsToMany(models.Skill, {
-        through: models.JobseekerSkills,
+      User.hasMany(models.Skill, {
+        foreignKey: "userId",
+        onDelete: "CASCADE",
+      });
+
+      User.hasMany(models.CareerGoal, {
+        foreignKey: "userId",
+        onDelete: "CASCADE",
+      });
+
+      User.hasMany(models.SoftSkill, {
         foreignKey: "userId",
         onDelete: "CASCADE",
       });
@@ -59,6 +68,26 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
       });
 
+      User.hasOne(models.ProfessionalInformation, {
+        foreignKey: 'userId',
+      });
+
+      User.hasOne(models.PersonalInformation, {
+        foreignKey: 'userId',
+      });
+
+      User.hasMany(models.Experience, {
+        foreignKey: 'userId',
+      });
+
+      User.hasMany(models.Education, {
+        foreignKey: 'userId',
+      });
+
+      User.hasMany(models.Certification, {
+        foreignKey: 'userId',
+      });
+
       User.hasMany(models.Feature, {
         foreignKey: "createdBy",
         as: "creator",
@@ -74,9 +103,12 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         allowNull: false
       },
-      name: { type: DataTypes.STRING, allowNull: false },
+      fName: { type: DataTypes.STRING, allowNull: false },
+      mName: { type: DataTypes.STRING, allowNull: true },
+      lName: { type: DataTypes.STRING, allowNull: false },
+      phone: { type: DataTypes.STRING, allowNull: true, unique: true },
       email: { type: DataTypes.STRING, allowNull: false, unique: true },
-      password: { type: DataTypes.STRING },
+      password: { type: DataTypes.STRING, allowNull: true },
       role: {
         type: DataTypes.ENUM("job_seeker", "recruiter", "admin"),
         allowNull: false,

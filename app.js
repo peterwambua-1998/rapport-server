@@ -12,7 +12,6 @@ const { sequelize } = require("./models");
 const appRoutes = require("./routes");
 
 var app = express();
-
 const sessionStore = new SequelizeStore({
   db: sequelize,
 });

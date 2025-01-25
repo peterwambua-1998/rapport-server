@@ -2,21 +2,34 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Skills', {
+    await queryInterface.createTable('Experiences', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
-      }, 
-      userId:{
-        type:Sequelize.UUID
       },
-      name: {
+      position: {
         type: Sequelize.STRING
       },
-      proficiency:{
-        type:Sequelize.STRING
+      employer: {
+        type: Sequelize.STRING
+      },
+      description: {
+        type: Sequelize.TEXT
+      },
+      startDate: {
+        type: Sequelize.DATE
+      },
+      endDate: {
+        type: Sequelize.DATE
+      },
+      userId: {
+        type: Sequelize.UUID
+      },
+      currentlyWorking: {
+        type: Sequelize.BOOLEAN,
+        default: false,
       },
       createdAt: {
         allowNull: false,
@@ -29,6 +42,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Skills');
+    await queryInterface.dropTable('Experiences');
   }
 };

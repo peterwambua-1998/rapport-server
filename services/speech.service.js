@@ -5,11 +5,15 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const OpenAI = require("openai");
-
 const {
-    JobSeeker,
+    PersonalInformation
 } = require("../models");
 const { sendMessageIo } = require('./socket.service');
+const { z } = require('zod');
+const { StructuredOutputParser } = require('@langchain/core/output_parsers')
+const { ChatOpenAI } = require('@langchain/openai');
+const { PromptTemplate } = require('@langchain/core/prompts')
+const { RunnableSequence } = require('@langchain/core/runnables');
 
 const openai = new OpenAI({
     apiKey: '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',
@@ -33,11 +37,9 @@ const addSpeechToQueue = async (speech) => {
         }
 
         const job = await speechQueue.add(speech);
-        const { userId, ioUserId, router } = speech;
+        const { userId } = speech;
 
-        router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
+        sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
 
         console.log(`Job added to queue with ID: ${job.id}`);
 
@@ -49,7 +51,7 @@ const addSpeechToQueue = async (speech) => {
 };
 
 
-function extractAudio(videoPath, audioPath, userId, ioUserId, router) {
+function extractAudio(videoPath, audioPath, userId) {
     return new Promise((resolve, reject) => {
         const command = `ffmpeg -i "${videoPath}" -ac 1 -ar 16000 -q:a 0 -map a "${audioPath}"`;
         exec(command, (error) => {
@@ -57,24 +59,21 @@ function extractAudio(videoPath, audioPath, userId, ioUserId, router) {
                 reject(error);
             } else {
                 resolve(audioPath);
-                router == 'register' ?
-                    sendMessageIo(ioUserId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null }) :
-                    sendMessageIo(userId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null });
+
+                sendMessageIo(userId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null });
             }
         });
     });
 }
 
 
-async function uploadToGCS(filePath, fileName, userId, ioUserId, router) {
+async function uploadToGCS(filePath, fileName, userId) {
     try {
         await storage.bucket(bucketName).upload(filePath, {
             destination: fileName,
         });
 
-        router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null });
+        sendMessageIo(userId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null });
 
         return `gs://${bucketName}/${fileName}`;
     } catch (error) {
@@ -84,7 +83,7 @@ async function uploadToGCS(filePath, fileName, userId, ioUserId, router) {
 }
 
 
-async function transcribeAudio(gcsUri, userId, ioUserId, router) {
+async function transcribeAudio(gcsUri, userId) {
     const request = {
         audio: {
             uri: gcsUri,
@@ -97,14 +96,11 @@ async function transcribeAudio(gcsUri, userId, ioUserId, router) {
     };
 
     console.log('Transcribing audio...');
-    router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
+
+    sendMessageIo(userId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
     const [operation] = await speechClient.longRunningRecognize(request);
 
-    router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null });
+    sendMessageIo(userId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null });
     const [response] = await operation.promise();
 
     const transcription = response.results
@@ -116,144 +112,120 @@ async function transcribeAudio(gcsUri, userId, ioUserId, router) {
     return transcription;
 }
 
-
-const extractSkillsAndExperienceAI = async (transcription, userId, ioUserId, router) => {
+// using vertex
+const vertexExtractInfo = async (transcription, userId) => {
     try {
-        const response = await openai.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `
-                    You are tasked with analyzing a transcription and extracting key insights in a structured format. Your output should be a JSON object without a single top-level key and formatted as follows:
-                    {
-                        "analysis": "A concise summary of the transcription.",
-                        "highlights": [
-                            "Strong leadership presence and confident communication style",
-                            "Clear articulation of complex technical concepts",
-                            "Engaging storytelling ability when describing past experiences",
-                            "Professional appearance and presentation skills"
-                        ],
-                        "recommendations": [
-                            "Consider adding specific metrics to quantify your achievements",
-                            "Include more examples of cross-functional leadership",
-                            "Highlight your technical expertise more prominently",
-                            "Add recent industry certifications or training"
-                        ],
-                        "keywords and expertise": [
-                            "Product Management",
-                            "Tech Leadership",
-                            "Agile",
-                            "SaaS",
-                            "B2B",
-                            "Enterprise Software"
-                        ],
-                        "strengths": [
-                            "Strategic Planning",
-                            "Team Leadership",
-                            "Product Innovation",
-                            "Stakeholder Management"
-                        ],
-                        "soft skills": [
-                            "Communication",
-                            "Emotional Intelligence",
-                            "Conflict Resolution",
-                            "Mentoring",
-                            "Public Speaking"
-                        ],
-                    }
-
-                    1. Analysis: Provide a concise summary of the transcription.
-
-                    2. Highlights: List the most notable observations, such as:
-                        Strong leadership presence and confident communication style.
-                        Clear articulation of complex technical concepts.
-                        Engaging storytelling ability.
-                        Professional appearance and presentation skills.
-                    
-                    3. Keywords and Expertise: Extract specific keywords or areas of expertise, for example:
-                        Product Management
-                        Tech Leadership
-                        Agile
-                        SaaS
-                        B2B
-                        Enterprise Software
-
-                    4. Strengths: Identify the individual's core strengths, such as:
-                        Strategic Planning
-                        Team Leadership
-                        Product Innovation
-                        Stakeholder Management
-
-                    5. Soft Skills: List relevant soft skills, for example:
-                        Communication
-                        Emotional Intelligence
-                        Conflict Resolution
-                        Mentoring
-                        Public Speaking
-                    `,
-                },
-                {
-                    role: "user",
-                    content: JSON.stringify(transcription),
-                },
-            ],
-            model: "gpt-4o",
-            response_format: {
-                type: "json_object",
-            },
-            temperature: 1,
-            max_completion_tokens: 2048,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
+        const summary = z.string().nullable().describe('A concise summary of the text.');
+        const highlights = z.array(z.string()).describe('Key points or achievements highlighted in the text.');
+        const recommendations = z.array(z.string()).describe('Suggestions or advice you can provide based on the text.');
+        const careerGoalsSchema = z.object({
+            name: z.string().nullable(),
         });
 
-        const assistantResponse = response.choices[0].message.content;
+        const softSkillsSchema = z.object({
+            name: z.string().nullable(),
+            proficiency: z.string().describe('It is the expertise level of soft skill eg beginner, intermediate, advanced or expert').default('intermediate'),
+        });
 
-        router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null });
+        const technicalSkillSchema = z.object({
+            name: z.string().nullable(),
+            proficiency: z.string().describe('It is the expertise level of technical skill eg beginner, intermediate, advanced or expert').default('intermediate'),
+        });
 
-        return assistantResponse;
+        const workExperienceSchema = z.object({
+            position: z.string().nullable(),
+            employer: z.string().nullable(),
+            description: z.string().nullable(),
+            startDate: z.coerce.date().nullable(),
+            endDate: z.coerce.date().nullable(),
+        });
+
+        const videoSchema = z.object({
+            pastExperience: z.array(workExperienceSchema).describe('Hold past experiences'),
+            softSkills: z.array(softSkillsSchema).describe('Personality traits, interpersonal skills, and other non-technical attributes (e.g., communication, leadership, teamwork)'),
+            technicalSkills: z.array(technicalSkillSchema).describe('Specific job-related abilities and expertise.'),
+            careerGoals: z.array(careerGoalsSchema),
+            summary,
+            highlights,
+            recommendations
+        });
+
+        const parser = StructuredOutputParser.fromZodSchema(videoSchema);
+
+        const model = new ChatOpenAI({
+            model: "gpt-4o-mini",
+            temperature: 0,
+            apiKey: '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',
+        });
+
+        const formatInstructions = parser.getFormatInstructions();
+
+        const prompt = new PromptTemplate({
+            template: `
+          You are an expert at extracting structured information from text.
+          Please analyze the following text and extract relevant profile information.
+          If you cannot find a specific piece of information, use null.
+          
+          {format_instructions}
+          
+          Text: {text}
+          
+          Extracted Information:`,
+            inputVariables: ["text"],
+            partialVariables: { format_instructions: formatInstructions },
+        });
+
+        const input = await prompt.format({
+            text: transcription,
+        });
+
+        const chain = RunnableSequence.from([
+            prompt,
+            model,
+            parser,
+        ]);
+
+        const response = await chain.invoke({
+            text: input
+        });
+
+        sendMessageIo(userId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null });
+
+        return response;
     } catch (error) {
         console.error("Error generating LLM response:", error);
         throw error;
     }
-};
+}
 
 // my job processor
 const speechService = async (job) => {
-    const { videoPath, fileName, userId, ioUserId, router } = job.data;
+    const { videoPath, fileName, userId } = job.data;
     try {
-
         const audioPath = path.join(process.cwd() + '/uploads/ai_videos/' + `${path.parse(fileName).name}.wav`);
-        await extractAudio(videoPath, audioPath, userId, ioUserId, router);
+        await extractAudio(videoPath, audioPath, userId);
 
-        const gcsUri = await uploadToGCS(audioPath, `${path.parse(fileName).name}.wav`, userId, ioUserId, router); 
+        const gcsUri = await uploadToGCS(audioPath, `${path.parse(fileName).name}.wav`, userId);
 
-        const transcription = await transcribeAudio(gcsUri, userId, ioUserId, router); 
+        const transcription = await transcribeAudio(gcsUri, userId);
 
-        const result = await extractSkillsAndExperienceAI(transcription, userId, ioUserId, router);
+        const result = await vertexExtractInfo(transcription, userId);
 
-        const jobseeker = await JobSeeker.findOne({ where: { userId: userId } });
-        await jobseeker.update({
+        const infoExists = await PersonalInformation.findOne({ where: { userId: userId } });
+        await infoExists.update({
             videoAnalysis: result
         })
 
-        console.log(jobseeker)
         console.log(result)
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);
-        router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'completed', percentage: 100, error: null }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'completed', percentage: 100, error: null });
+
+        sendMessageIo(userId, 'video-status-update', { status: 'completed', percentage: 100, error: null });
 
     } catch (error) {
         console.error('Error processing job:', error);
-        router == 'register' ?
-            sendMessageIo(ioUserId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message }) :
-            sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message });
+        sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message });
         throw error;
     }
 }
@@ -262,10 +234,9 @@ const speechService = async (job) => {
 speechQueue.process(speechService)
 
 speechQueue.on('failed', (job, err) => {
-    const { userId, ioUserId, router } = job.data;
-    router == 'register' ?
-        sendMessageIo(ioUserId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message }) :
-        sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message });
+    const { userId } = job.data;
+
+    sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message });
 });
 
 module.exports = addSpeechToQueue;

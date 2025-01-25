@@ -39,12 +39,12 @@ const generateLLMResponse = async (userProfile) => {
       messages: [
         {
           role: "system",
-          content: `You are an expert CV analyzer and interview preparation assistant.
-             Based on the given profile, generate interview preparation questions and 
-            answers tailored to the user's skills, and years of experience.
-             Generate a JSON object with a top-level key "questions" that contains all the required data. 
-             Do not nest an extra "questions" key within the "questions" object. 
-             The output should only have a single top-level "questions" key. use this format
+          content: `You are an expert interview preparation assistant.
+            Based on the given profile, generate interview preparation questions and 
+            answers tailored to the user's skills, skill level and years of experience.
+            Generate a JSON object with a top-level key "questions" that contains all the required data. 
+            Do not nest an extra "questions" key within the "questions" object. 
+            The output should only have a single top-level "questions" key. use this format
             [{
               "question": "Can you describe?",
               "answer": "In my previous role"
