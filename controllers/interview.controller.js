@@ -1,6 +1,7 @@
 const { Skill, User, PersonalInformation, ProfessionalInformation, Education, Certification, Experience } = require("../models");
 const generateInterviewQuestions = require("../services/langChain.service");
 const generateLLMResponse = require("../services/openAi.service");
+const addQuestionsToQueue = require("../services/processQuesions.service");
 const { generateQuestions } = require("../services/questions.Service");
 
 exports.getQuestions = async (req, res, next) => {
@@ -23,7 +24,32 @@ exports.getQuestions = async (req, res, next) => {
   }
 };
 
-exports.getResults = async (req, res, next) => {
+exports.storeQuestions = async (req, res, next) => {
   try {
-  } catch (error) { }
+
+    const files = req.files;
+
+    if (!files.video) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    const video_name = files.video[0].filename;
+    const video_path = files.video[0].path;
+
+    const questions = JSON.parse(req.body.questions || '[]')
+    let format_qtn = questions.join();
+
+    console.log(format_qtn)
+
+    await addQuestionsToQueue({ videoPath: video_path, fileName: video_name, userId: req.user.id, router: 'register', questions:  format_qtn});
+
+    return res.json({
+        status: "success",
+        info: "questions saved"
+    })
+
+  } catch (error) {
+    console.log(error);
+    return res.json(error).status(500);
+  }
 };

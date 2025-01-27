@@ -5,9 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const OpenAI = require("openai");
-const {
-    PersonalInformation
-} = require("../models");
 const { sendMessageIo } = require('./socket.service');
 const { z } = require('zod');
 const { StructuredOutputParser } = require('@langchain/core/output_parsers')
@@ -23,19 +20,19 @@ const storage = new Storage();
 const speechClient = new speech.SpeechClient();
 const bucketName = 'ai-app-49d1e.appspot.com';
 
-const speechQueue = new Bull('speech')
+const interviewQueue = new Bull('interview')
 
 
-const addSpeechToQueue = async (speech) => {
+const addQuestionsToQueue = async (speech) => {
     try {
         if (!speech.videoPath || !speech.fileName) {
             throw new Error('Missing required parameters: videoPath or fileName');
         }
 
-        const job = await speechQueue.add(speech);
+        const job = await interviewQueue.add(speech);
         const { userId } = speech;
 
-        sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
+        sendMessageIo(userId, 'question-status-update', { status: 'Queue storage', percentage: 5, error: null });
 
         console.log(`Job added to queue with ID: ${job.id}`);
 
@@ -56,7 +53,7 @@ function extractAudio(videoPath, audioPath, userId) {
             } else {
                 resolve(audioPath);
 
-                sendMessageIo(userId, 'video-status-update', { status: 'extracting audio', percentage: 25, error: null });
+                sendMessageIo(userId, 'question-status-update', { status: 'extracting audio', percentage: 25, error: null });
             }
         });
     });
@@ -69,7 +66,7 @@ async function uploadToGCS(filePath, fileName, userId) {
             destination: fileName,
         });
 
-        sendMessageIo(userId, 'video-status-update', { status: 'uploading to gs', percentage: 40, error: null });
+        sendMessageIo(userId, 'question-status-update', { status: 'uploading to gs', percentage: 40, error: null });
 
         return `gs://${bucketName}/${fileName}`;
     } catch (error) {
@@ -77,7 +74,6 @@ async function uploadToGCS(filePath, fileName, userId) {
         throw error
     }
 }
-
 
 async function transcribeAudio(gcsUri, userId) {
     const request = {
@@ -93,10 +89,10 @@ async function transcribeAudio(gcsUri, userId) {
 
     console.log('Transcribing audio...');
 
-    sendMessageIo(userId, 'video-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
+    sendMessageIo(userId, 'question-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
     const [operation] = await speechClient.longRunningRecognize(request);
 
-    sendMessageIo(userId, 'video-status-update', { status: 'fetching transcription...', percentage: 88, error: null });
+    sendMessageIo(userId, 'question-status-update', { status: 'fetching transcription...', percentage: 88, error: null });
     const [response] = await operation.promise();
 
     const transcription = response.results
@@ -108,47 +104,14 @@ async function transcribeAudio(gcsUri, userId) {
     return transcription;
 }
 
-// using vertex
-const vertexExtractInfo = async (transcription, userId) => {
+const vertexExtractInfo = async (transcription, userId, qtns) => {
     try {
-        const summary = z.string().nullable().describe('A concise summary of the text.');
-        const highlights = z.array(z.string()).describe('Key points or achievements highlighted in the text.');
-        const recommendations = z.array(z.string()).min(1).describe('Suggestions or advice you can provide based on the text')
-        const careerGoalsSchema = z.object({
-            name: z.string().nullable(),
+        const interviewResults = z.object({
+            grade: z.number().min(0).max(100).describe('How well the questions were answered on a scale of 0 to 100'),
+            feedback: z.string().describe('Ways to improve'),
         });
 
-        const softSkillsSchema = z.object({
-            name: z.string().nullable(),
-            proficiency: z.string().describe('It is the expertise level of soft skill eg beginner, intermediate, advanced or expert').default('intermediate'),
-        });
-
-        const technicalSkillSchema = z.object({
-            name: z.string().nullable(),
-            proficiency: z.string().describe('It is the expertise level of technical skill eg beginner, intermediate, advanced or expert').default('intermediate'),
-        });
-
-        const workExperienceSchema = z.object({
-            position: z.string().nullable(),
-            employer: z.string().nullable(),
-            description: z.string().nullable(),
-            startDate: z.coerce.date().nullable(),
-            endDate: z.coerce.date().nullable(),
-        });
-
-        const videoSchema = z.object({
-            pastExperience: z.array(workExperienceSchema).describe('Hold past experiences'),
-            softSkills: z.array(softSkillsSchema).describe('Personality traits, interpersonal skills, and other non-technical attributes (e.g., communication, leadership, teamwork)'),
-            technicalSkills: z.array(technicalSkillSchema).describe('Specific job-related abilities and expertise.'),
-            careerGoals: z.array(careerGoalsSchema),
-            summary,
-            highlights,
-            recommendations
-        });
-
-        const parser = StructuredOutputParser.fromZodSchema(videoSchema);
-
-        console.log(parser);
+        const parser = StructuredOutputParser.fromZodSchema(interviewResults);
 
         const model = new ChatOpenAI({
             model: "gpt-4o-mini",
@@ -160,27 +123,29 @@ const vertexExtractInfo = async (transcription, userId) => {
 
         const prompt = new PromptTemplate({
             template: `
-            You are an expert at extracting structured information from text.
-            Please analyze the following text and extract relevant profile information.
-            If you cannot find a specific piece of information, use null for single values or empty arrays for array fields.
+            You are an expert at marking questions, where questions are answered using a single text. 
+            There are multiple questions separated by a comma.
+            Please analyze the following text and determine the result.
             
             Make sure to:
-            1. Provide a concise summary of context of the text
-            2. Extract meaningful highlights as separate points
-            3. Offer actionable recommendations based on the content
+            1. Provide a grade
+            2. feedback how user can improve
             
             {format_instructions}
             
+            Questions: {questions}
             Text: {text}
           
             Extracted Information:`,
-            inputVariables: ["text"],
+            inputVariables: ["text", "questions"],
             partialVariables: { format_instructions: formatInstructions },
         });
 
         const input = await prompt.format({
+            questions: qtns,
             text: transcription,
         });
+        console.log(input)
 
         const chain = RunnableSequence.from([
             prompt,
@@ -189,21 +154,22 @@ const vertexExtractInfo = async (transcription, userId) => {
         ]);
 
         const response = await chain.invoke({
-            text: input
-        });
+            questions: qtns,
+            text: transcription
+        })
 
-        sendMessageIo(userId, 'video-status-update', { status: 'transcription  analysis...', percentage: 95, error: null });
+        sendMessageIo(userId, 'question-status-update', { status: 'transcription  analysis...', percentage: 95, error: null });
 
         return response;
+
     } catch (error) {
         console.error("Error generating LLM response:", error);
         throw error;
     }
 }
 
-// my job processor
 const speechService = async (job) => {
-    const { videoPath, fileName, userId } = job.data;
+    const { videoPath, fileName, userId, questions } = job.data;
     try {
         const audioPath = path.join(process.cwd() + '/uploads/ai_videos/' + `${path.parse(fileName).name}.wav`);
         await extractAudio(videoPath, audioPath, userId);
@@ -212,34 +178,28 @@ const speechService = async (job) => {
 
         const transcription = await transcribeAudio(gcsUri, userId);
 
-        const result = await vertexExtractInfo(transcription, userId);
-
-        const infoExists = await PersonalInformation.findOne({ where: { userId: userId } });
-        await infoExists.update({
-            videoAnalysis: result
-        })
+        const result = await vertexExtractInfo(transcription, userId, questions);
 
         console.log(result)
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);
 
-        sendMessageIo(userId, 'video-status-update', { status: 'completed', percentage: 100, error: null });
+        sendMessageIo(userId, 'question-status-update', { status: 'completed', percentage: 100, error: null });
 
     } catch (error) {
         console.error('Error processing job:', error);
-        sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: error.message });
+        sendMessageIo(userId, 'question-status-update', { status: 'failed', percentage: 100, error: error.message });
         throw error;
     }
 }
 
+interviewQueue.process(speechService)
 
-speechQueue.process(speechService)
-
-speechQueue.on('failed', (job, err) => {
+interviewQueue.on('failed', (job, err) => {
     const { userId } = job.data;
 
-    sendMessageIo(userId, 'video-status-update', { status: 'failed', percentage: 100, error: err.message });
+    sendMessageIo(userId, 'question-status-update', { status: 'failed', percentage: 100, error: err.message });
 });
 
-module.exports = addSpeechToQueue;
+module.exports = addQuestionsToQueue;
