@@ -2,7 +2,7 @@ const { writeFile, unlink } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { processFile } = require('../services/resumeExtraction.service');
-const { ProfessionalInformation, PersonalInformation, Education, Experience, Certification, Skill, User } = require("../models");
+const { ProfessionalInformation, PersonalInformation, Education, Experience, Certification, Skill, User, JobSeekerStat } = require("../models");
 const addSpeechToQueue = require('../services/speech.service');
 
 const clientID = process.env.LINKEDIN_CLIENT_ID;
@@ -171,7 +171,6 @@ exports.storePersonalInfo = async (req, res) => {
             info: pInfo
         });
     } catch (error) {
-        console.log(error);
         res.status(500).json({
             status: "error",
             message: error.message,
@@ -308,6 +307,7 @@ exports.getJobSeekerInfo = async (req, res) => {
                 { model: Experience },
                 { model: Certification },
                 { model: Skill },
+                { model: JobSeekerStat }
             ]
         });
 
@@ -406,7 +406,13 @@ function transformProfileInfo(profileInfo) {
         PortfolioUrl: profileInfo.ProfessionalInformation?.portfolio || null,
         GithubUrl: profileInfo.ProfessionalInformation?.github || null,
         videoAnalysis: profileInfo.PersonalInformation?.videoAnalysis,
-
+        stats: {
+            profileViews: profileInfo.JobSeekerStat?.profileViews || 0,
+            searchAppearance: profileInfo.JobSeekerStat?.searchAppearance || 0,
+            interviewsCompleted: profileInfo.JobSeekerStat?.interviewsCompleted || 0,
+            challengesCompleted: profileInfo.JobSeekerStat?.challengesCompleted || 0,
+            daysOnPlatform: profileInfo.JobSeekerStat?.daysOnPlatform || 0
+        },
         Education: (profileInfo.Education || []).map(edu => ({
             school: edu.school,
             degree: edu.degree,

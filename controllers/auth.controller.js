@@ -2,14 +2,12 @@ const {
   User,
   RecruiterProfile,
   JobSeeker,
-  JobseekerSkills,
-  UserLinkedProfile,
+  JobSeekerStat,
 } = require("../models");
 const crypto = require("crypto");
 const { Op } = require("sequelize");
 const { sendEmail } = require("../services/email.service");
 const bcrypt = require("bcrypt");
-const addSpeechToQueue = require("../services/speech.service");
 
 // Registration for recruiters
 exports.register = async (req, res) => {
@@ -95,6 +93,8 @@ exports.registerJobseeker = async (req, res) => {
       isVerified: false,
     });
 
+    
+
     await sendEmail(user.email, "registration", {
       name: user.fName,
       verificationLink: verificationToken
@@ -118,7 +118,7 @@ exports.resendVerification = async (req, res) => {
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await user.update({verificationToken: code})
+    await user.update({ verificationToken: code })
 
     await sendEmail(user.email, "registration", {
       name: user.fName,
@@ -241,6 +241,15 @@ exports.verifyEmail = async (req, res) => {
       email: user.email,
       role: user.role,
     }
+
+    await JobSeekerStat.create({
+      userId: user.id,
+      profileViews: 0,
+      searchAppearance: 0,
+      interviewsCompleted: 0,
+      challengesCompleted: 0,
+      daysOnPlatform: 1
+    });
 
     req.login(authUser, function (err) {
       if (err) {

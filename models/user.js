@@ -72,6 +72,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
       });
 
+      User.hasOne(models.JobSeekerStat, {
+        foreignKey: 'userId',
+      });
+
       User.hasOne(models.PersonalInformation, {
         foreignKey: 'userId',
       });

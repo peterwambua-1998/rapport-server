@@ -2,7 +2,7 @@ const passport = require("passport");
 const LocalStrategy = require("passport-local").Strategy;
 var LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
 const bcrypt = require("bcryptjs");
-const { User, RecruiterProfile } = require("../models");
+const { User, RecruiterProfile, JobSeekerStat } = require("../models");
 const { default: axios } = require("axios");
 const path = require('path');
 const fs = require('fs');
@@ -26,6 +26,14 @@ passport.use(
           return done({ message: "Incorrect email or password.", needsPasswordSetup: false }, null);
         }
 
+        const stats = await JobSeekerStat.findOne({where:{ userId: user.id }});
+        console.log(stats);
+        
+        if (stats) {
+          let d = stats.daysOnPlatform ?? 0;
+          await stats.update({ daysOnPlatform: d + 1 });
+        }
+
         const plainUser = {
           id: user.id,
           username: user.fName,
@@ -33,9 +41,10 @@ passport.use(
           role: user.role,
           linkedIn: user.linkedinId ? true : false
         };
-        
+
         return done(null, plainUser);
       } catch (err) {
+        
         return done(err);
       }
     }
@@ -52,7 +61,6 @@ passport.use(
       passReqToCallback: true,
     },
     async (req, accessToken, refreshToken, profile, done) => {
-      console.log(profile);
 
       process.nextTick(async () => {
         try {
@@ -77,6 +85,17 @@ passport.use(
               isVerified: true,
             });
 
+            if (role == "job_seeker") {
+              await JobSeekerStat.create({
+                userId: user.id,
+                profileViews: 0,
+                searchAppearance: 0,
+                interviewsCompleted: 0,
+                challengesCompleted: 0,
+                daysOnPlatform: 1
+              });
+            }
+
             if (role === "recruiter") {
               await RecruiterProfile.create({
                 user_id: user.id,
@@ -84,6 +103,12 @@ passport.use(
                 last_name: family_name,
                 country: locale.country,
               });
+            }
+          } else {
+            const stats = await JobSeekerStat.findOne({where: { userId: user.id }});
+            if (stats) {
+              let d = stats.daysOnPlatform ?? 0;
+              await stats.update({ daysOnPlatform: d  + 1 });
             }
           }
 

@@ -65,6 +65,8 @@ router.post(
     res.status(201).json({ message: "Successfully logged in", user: req.user }); 
   },
   function (err, req, res, next) {
+    console.log(err);
+    
     res.status(401).json({ message: err });
   }
 );
