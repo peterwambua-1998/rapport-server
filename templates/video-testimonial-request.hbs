@@ -1,0 +1,85 @@
+<!-- server/templates/video-testimonial-request.hbs -->
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #edeeed;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #2b4033;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .description {
+            background-color: #edeeed;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #2b4033;
+        }
+        .button {
+            display: inline-block;
+            background-color: #acc8ac;
+            color: #2b4033;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #94a48c;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Video Testimonial Request</h1>
+        </div>
+        <div class="content">
+            <p>Hello {{recipientName}},</p>
+            
+            <p>We would love to hear your story! Here's what we're looking for:</p>
+            
+            <div class="description">
+                <p>{{description}}</p>
+            </div>
+
+            <p>To record and submit your video testimonial, simply click the button below:</p>
+            
+            <center>
+                <a href="{{uploadLink}}" class="button">Record Your Testimonial</a>
+            </center>
+
+            <p>We greatly appreciate your time and contribution!</p>
+            
+            <p>Best regards,<br>{{senderName}}</p>
+        </div>
+        <div class="footer">
+            <p>This is a one-time request. Link expires in 7 days.</p>
+        </div>
+    </div>
+</body>
+</html>

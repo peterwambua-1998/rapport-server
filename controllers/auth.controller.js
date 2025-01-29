@@ -258,7 +258,7 @@ exports.verifyEmail = async (req, res) => {
       res.json({ status: true, msg: 'Email verification successfull', user: user }).status(200)
     });
   } catch (error) {
-    res.status(500).send('An error occurred during verification.');
+    res.status(500).json('An error occurred during verification.');
   }
 }
 
@@ -292,7 +292,7 @@ exports.setNewPassword = async (req, res) => {
 exports.logout = async (req, res) => {
   req.logout((err) => {
     if (err) {
-      return res.status(500).send("Error logging out");
+      return res.status(500).json("Error logging out");
     }
     res.status(201).json({ message: "Successfuly loged out", success: true });
   });

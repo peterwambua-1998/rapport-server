@@ -22,6 +22,7 @@ const schedule = require('./schedule.routes');
 const emailConfiguration = require('./emailConfiguration.routes');
 const emailTemplate = require('./emailTemplate.routes');
 const profileVisibility = require('./profileVisibility.routes');
+const testimonial = require('./testimonial.routes');
 
 router.use("/skill-levels", skillLevelRoutes);
 router.use("/years-of-experience", yearsOfExperienceRoutes);
@@ -45,7 +46,7 @@ router.use("/schedule", schedule);
 router.use("/email-configurations", emailConfiguration);
 router.use("/email-templates", emailTemplate);
 router.use("/profile-visibilities", profileVisibility);
-
+router.use("/testimonial", testimonial);
 
 router.get("/", (req, res) => {
   res.send("Hello World");

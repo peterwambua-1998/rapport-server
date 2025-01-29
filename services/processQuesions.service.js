@@ -11,6 +11,7 @@ const { StructuredOutputParser } = require('@langchain/core/output_parsers')
 const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
+const { Interview } = require("../models");
 
 const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
 // 
@@ -33,8 +34,6 @@ const addQuestionsToQueue = async (speech) => {
         const { userId } = speech;
 
         sendMessageIo(userId, 'question-status-update', { status: 'Queue storage', percentage: 5, error: null });
-
-        console.log(`Job added to queue with ID: ${job.id}`);
 
         return job;
     } catch (error) {
@@ -70,7 +69,6 @@ async function uploadToGCS(filePath, fileName, userId) {
 
         return `gs://${bucketName}/${fileName}`;
     } catch (error) {
-        console.log(error)
         throw error
     }
 }
@@ -86,8 +84,6 @@ async function transcribeAudio(gcsUri, userId) {
             languageCode: 'en-US',
         },
     };
-
-    console.log('Transcribing audio...');
 
     sendMessageIo(userId, 'question-status-update', { status: 'transcribing audio...', percentage: 68, error: null });
     const [operation] = await speechClient.longRunningRecognize(request);
@@ -145,7 +141,6 @@ const vertexExtractInfo = async (transcription, userId, qtns) => {
             questions: qtns,
             text: transcription,
         });
-        console.log(input)
 
         const chain = RunnableSequence.from([
             prompt,
@@ -180,7 +175,12 @@ const speechService = async (job) => {
 
         const result = await vertexExtractInfo(transcription, userId, questions);
 
-        console.log(result)
+        await Interview.create({
+            userId: userId,
+            video: videoPath,
+            feedback: result.feedback,
+            grade: result.grade
+        })
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);

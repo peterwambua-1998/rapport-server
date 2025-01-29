@@ -1,4 +1,4 @@
-const { Skill, User, PersonalInformation, ProfessionalInformation, Education, Certification, Experience } = require("../models");
+const { Skill, User, Interview, Education, Certification } = require("../models");
 const generateInterviewQuestions = require("../services/langChain.service");
 const generateLLMResponse = require("../services/openAi.service");
 const addQuestionsToQueue = require("../services/processQuesions.service");
@@ -41,11 +41,11 @@ exports.storeQuestions = async (req, res, next) => {
 
     console.log(format_qtn)
 
-    await addQuestionsToQueue({ videoPath: video_path, fileName: video_name, userId: req.user.id, router: 'register', questions:  format_qtn});
+    await addQuestionsToQueue({ videoPath: video_path, fileName: video_name, userId: req.user.id, router: 'register', questions: format_qtn });
 
     return res.json({
-        status: "success",
-        info: "questions saved"
+      status: "success",
+      info: "questions saved"
     })
 
   } catch (error) {
@@ -53,3 +53,12 @@ exports.storeQuestions = async (req, res, next) => {
     return res.json(error).status(500);
   }
 };
+
+exports.getResults = async (req, res) => {
+  try {
+    const results = await Interview.findAll({ where: { userId: req.user.id } });
+    return res.json(results);
+  } catch (error) {
+    return res.json(error).status(500);
+  }
+}

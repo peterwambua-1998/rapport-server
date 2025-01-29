@@ -51,11 +51,8 @@ exports.generateQuestions = async (profileInfo) => {
             profile: input
         });
 
-        console.log(response);
-
         return response;
     } catch (error) {
-        console.log(error)
         return [];
     }
 }

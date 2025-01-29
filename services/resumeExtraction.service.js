@@ -7,6 +7,7 @@ const { StructuredOutputParser } = require('@langchain/core/output_parsers')
 const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
+const { DocxLoader } = require('@langchain/community/document_loaders/fs/docx');
 
 exports.processFile = async (file, type) => {
     try {
@@ -22,7 +23,7 @@ exports.processFile = async (file, type) => {
             loader = new DocxLoader(file);
             documents = await loader.load();
         }
-        
+
         const fullText = documents.map(doc => doc.pageContent).join('\n');
 
         const educationSchema = z.object({
@@ -91,7 +92,7 @@ exports.processFile = async (file, type) => {
               
               Extracted Information:`,
             inputVariables: ["text"],
-            partialVariables: {format_instructions: formatInstructions},
+            partialVariables: { format_instructions: formatInstructions },
         });
 
         const input = await prompt.format({

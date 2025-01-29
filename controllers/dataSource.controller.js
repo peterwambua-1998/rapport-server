@@ -2,7 +2,7 @@ const { writeFile, unlink } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { processFile } = require('../services/resumeExtraction.service');
-const { ProfessionalInformation, PersonalInformation, Education, Experience, Certification, Skill, User, JobSeekerStat } = require("../models");
+const { ProfessionalInformation, PersonalInformation, Education, Testimonial, Experience, Certification, Skill, User, JobSeekerStat } = require("../models");
 const addSpeechToQueue = require('../services/speech.service');
 
 const clientID = process.env.LINKEDIN_CLIENT_ID;
@@ -149,7 +149,6 @@ exports.storePersonalInfo = async (req, res) => {
                 about,
                 location,
                 industry,
-                videoAnalysis: vid,
             });
 
             return res.status(201).json({
@@ -307,11 +306,13 @@ exports.getJobSeekerInfo = async (req, res) => {
                 { model: Experience },
                 { model: Certification },
                 { model: Skill },
-                { model: JobSeekerStat }
+                { model: JobSeekerStat },
             ]
         });
+        const test = await Testimonial.findAll({ where: { userId: req.user.id } });
 
         const profileInfo = transformProfileInfo(query);
+        profileInfo.testimonials = test;
 
         return res.json({
             status: true,
@@ -406,6 +407,7 @@ function transformProfileInfo(profileInfo) {
         PortfolioUrl: profileInfo.ProfessionalInformation?.portfolio || null,
         GithubUrl: profileInfo.ProfessionalInformation?.github || null,
         videoAnalysis: profileInfo.PersonalInformation?.videoAnalysis,
+        testimonials: profileInfo.Testimonial,
         stats: {
             profileViews: profileInfo.JobSeekerStat?.profileViews || 0,
             searchAppearance: profileInfo.JobSeekerStat?.searchAppearance || 0,
