@@ -11,7 +11,7 @@ const { StructuredOutputParser } = require('@langchain/core/output_parsers')
 const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
-const { Interview } = require("../models");
+const { Interview, JobSeekerStat } = require("../models");
 
 const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
 // 
@@ -179,8 +179,15 @@ const speechService = async (job) => {
             userId: userId,
             video: videoPath,
             feedback: result.feedback,
-            grade: result.grade
-        })
+            grade: result.grade,
+            questions: questions
+        });
+
+        const stats = await JobSeekerStat.findOne({ where: { userId: userId } });
+        if (stats) {
+            let i = stats.interviewsCompleted ?? 0;
+            await stats.update({ interviewsCompleted: i + 1 });
+        }
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);

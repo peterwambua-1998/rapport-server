@@ -39,7 +39,6 @@ exports.storeQuestions = async (req, res, next) => {
     const questions = JSON.parse(req.body.questions || '[]')
     let format_qtn = questions.join();
 
-    console.log(format_qtn)
 
     await addQuestionsToQueue({ videoPath: video_path, fileName: video_name, userId: req.user.id, router: 'register', questions: format_qtn });
 
