@@ -49,7 +49,7 @@ exports.processFile = async (file, type) => {
         });
 
         const skillSchema = z.object({
-            name: z.string().nullable(),
+            name: z.string().nullable().describe("Technical skill name (e.g., Python, React, AWS)"),
             proficiency: z.string().describe('It is the expertise level of skill eg beginner, intermediate, advanced or expert').nullable(),
         });
 
@@ -67,7 +67,7 @@ exports.processFile = async (file, type) => {
             Education: z.array(educationSchema),
             WorkExperience: z.array(workExperienceSchema),
             Certifications: z.array(certificationSchema),
-            Skills: z.array(skillSchema),
+            Skills: z.array(skillSchema).describe('Only extract technical skills - specific tools, technologies, programming languages, and hard skills. Exclude soft skills like communication, teamwork, leadership, etc.'),
         });
 
         const parser = StructuredOutputParser.fromZodSchema(profileSchema);
