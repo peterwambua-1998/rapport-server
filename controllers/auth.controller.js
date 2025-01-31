@@ -200,15 +200,9 @@ exports.resetPassword = async (req, res) => {
 
 // Change Password
 exports.changePassword = async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { newPassword } = req.body;
   try {
     const user = await User.findByPk(req.user.id);
-    if (!(await user.validatePassword(currentPassword))) {
-      return res
-        .status(401)
-        .json({ success: false, error: "Old password is incorrect" });
-    }
-
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();

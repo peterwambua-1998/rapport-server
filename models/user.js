@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     async validatePassword(password) {
-      return bcrypt.compare(password, this.password);
+      return await bcrypt.compare(password, this.password);
     }
 
     static associate(models) {
@@ -24,6 +24,11 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: "CASCADE",
       });
 
+      User.hasMany(models.Feedback, {
+        foreignKey: "userId",
+        onDelete: "CASCADE",
+      });
+
       User.hasMany(models.CareerGoal, {
         foreignKey: "userId",
         onDelete: "CASCADE",
@@ -35,6 +40,11 @@ module.exports = (sequelize, DataTypes) => {
       });
 
       User.hasOne(models.VisibilitySetting, {
+        foreignKey: "userId",
+        onDelete: "CASCADE",
+      });
+
+      User.hasOne(models.Preference, {
         foreignKey: "userId",
         onDelete: "CASCADE",
       });

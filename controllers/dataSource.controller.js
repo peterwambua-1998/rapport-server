@@ -2,7 +2,7 @@ const { writeFile, unlink } = require('node:fs/promises');
 const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { processFile } = require('../services/resumeExtraction.service');
-const { ProfessionalInformation, PersonalInformation, Education, Testimonial, Experience, Certification, Skill, User, JobSeekerStat } = require("../models");
+const { ProfessionalInformation, PersonalInformation, Education, Testimonial, Feedback, Experience, Certification, Skill, User, JobSeekerStat, Preference } = require("../models");
 const addSpeechToQueue = require('../services/speech.service');
 
 const clientID = process.env.LINKEDIN_CLIENT_ID;
@@ -319,7 +319,6 @@ exports.getJobSeekerInfo = async (req, res) => {
             profileInfo
         });
     } catch (error) {
-        console.log(error)
         res.json({ status: false, message: error.message, }).status(400)
     }
 }
@@ -380,6 +379,109 @@ exports.callBackLinkedInd = async (req, res) => {
     } catch (error) {
         console.error('LinkedIn API Error:', error.response ? error.response.data : error.message);
         res.status(500).json({ error: 'Failed to retrieve LinkedIn profile' });
+    }
+}
+
+exports.getPreferences = async (req, res) => {
+    try {
+        const user = req.user;
+
+        const preferences = await Preference.findOne({ where: { userId: user.id } })
+
+        return res.json({ status: true, preferences });
+
+    } catch (error) {
+        res.json({ status: false, message: error.message, }).status(500)
+    }
+}
+
+exports.storePreferences = async (req, res) => {
+    try {
+        const {
+            profileActiveStatus,
+            profileVisible,
+            profilePageBackgroundColor,
+            sectionsVisibility,
+            source,
+            recruiterViewsProfile,
+            releases,
+            promotions,
+        } = req.body;
+
+        const user = req.user;
+
+        const preferences = await Preference.findOne({ where: { userId: user.id } })
+
+        if (preferences) {
+            if (source == "profile") {
+                preferences.update({
+                    profileVisible: profileVisible,
+                    activeStatus: profileActiveStatus,
+                    bgColor: profilePageBackgroundColor,
+                    skills: sectionsVisibility.Skills,
+                    education: sectionsVisibility.Education,
+                    experience: sectionsVisibility.Experience,
+                    profInfo: sectionsVisibility['Professional Information'],
+                    careerGoals: sectionsVisibility['Career Goals']
+                })
+            }
+
+            if (source == "notification") {
+                preferences.update({
+                    recruiterViewsProfile,
+                    releases,
+                    promotions,
+                })
+            }
+
+            return res.json({ status: true, preferences: preferences });
+        }
+
+        let storePref;
+
+        if (source == "profile") {
+            storePref = await Preference.create({
+                userId: user.id,
+                profileVisible: profileVisible,
+                activeStatus: profileActiveStatus,
+                bgColor: profilePageBackgroundColor,
+                skills: sectionsVisibility.Skills,
+                education: sectionsVisibility.Education,
+                experience: sectionsVisibility.Experience,
+                profInfo: sectionsVisibility['Professional Information'],
+                careerGoals: sectionsVisibility['Career Goals']
+            });
+        }
+
+        if (source == "notification") {
+            storePref = await Preference.create({
+                userId: user.id,
+                recruiterViewsProfile,
+                releases,
+                promotions,
+            })
+        }
+
+        return res.json({ status: true, preferences: storePref });
+
+    } catch (error) {
+        res.json({ status: false, message: error.message, }).status(500)
+    }
+}
+
+exports.storeFeedback = async (req, res) => {
+    try {
+        const { message } = req.body;
+        
+        const feedback = await Feedback.create({
+            userId: req.user.id,
+            message,
+        })
+
+        return res.json({ status: true, feedback });
+
+    } catch (error) {
+        res.json({ status: false, message: error.message, }).status(500)
     }
 }
 

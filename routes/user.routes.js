@@ -3,6 +3,7 @@ const userController = require("../controllers/user.controller");
 const { daysOnPlatformStore, challengesCompletedStore, interviewsCompletedStore, searchAppearanceStore, profileViewsStore, getJobSeekerStats } = require("../controllers/jobSeekerStats.controller");
 const recruiterProfileMiddleware = require("../middleware/recruiterProfileMiddleware");
 const uploadImagesMiddleware = require("../middleware/jobseekerMiddleware")
+const { getPreferences, storePreferences, storeFeedback } = require('../controllers/dataSource.controller');
 
 
 const router = express.Router();
@@ -42,5 +43,11 @@ router.post("/stats/interviews", interviewsCompletedStore);
 router.post("/stats/search-appearance", searchAppearanceStore);
 router.post("/stats/profile-views", profileViewsStore);
 router.get("/stats/job-seeker/get", getJobSeekerStats);
+
+// job seeker preferences routes
+
+router.get('/get/preferences', getPreferences);
+router.post('/store/preferences', storePreferences);
+router.post('/job-seeker/feedback/store', storeFeedback);
 
 module.exports = router;
