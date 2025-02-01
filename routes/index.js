@@ -52,6 +52,6 @@ router.get("/", (req, res) => {
   res.send("Hello World");
 });
 
-router.get('/youtube/oauth2callback', )
+// router.get('/youtube/oauth2callback', )
 
 module.exports = router;
