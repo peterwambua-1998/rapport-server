@@ -14,6 +14,7 @@ const { StructuredOutputParser } = require('@langchain/core/output_parsers')
 const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
+const { google } = require('googleapis')
 
 const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
 // 
@@ -37,7 +38,6 @@ const addSpeechToQueue = async (speech) => {
 
         sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
 
-        console.log(`Job added to queue with ID: ${job.id}`);
 
         return job;
     } catch (error) {
@@ -46,6 +46,44 @@ const addSpeechToQueue = async (speech) => {
     }
 };
 
+const uploadToYouTube = async (videoPath) => {
+    try {
+        const youtube = google.youtube({
+            version: 'v3',
+            auth: "AIzaSyCRyGPrquCiuqmOYlUnd7k3DhI3iYUDdjg"
+        });
+        console.log(process.env.YOUTUBE_API_KEY)
+        let title = 'Default Title';
+        let description = 'Default Description';
+        let privacyStatus = 'private';
+
+        const videoMetadata = {
+            snippet: {
+                title,
+                description,
+                categoryId: '22' // Category ID for "People & Blogs"
+            },
+            status: {
+                privacyStatus
+            }
+        };
+
+        const media = {
+            body: fs.createReadStream(videoPath)
+        };
+
+        const response = await youtube.videos.insert({
+            part: ['snippet', 'status'],
+            requestBody: videoMetadata,
+            media: media,
+        });
+
+        return response;
+    } catch (error) {
+        console.error('YouTube error', error);
+        throw error;
+    }
+}
 
 function extractAudio(videoPath, audioPath, userId) {
     return new Promise((resolve, reject) => {
@@ -148,8 +186,6 @@ const vertexExtractInfo = async (transcription, userId) => {
 
         const parser = StructuredOutputParser.fromZodSchema(videoSchema);
 
-        console.log(parser);
-
         const model = new ChatOpenAI({
             model: "gpt-4o-mini",
             temperature: 0,
@@ -219,6 +255,7 @@ const speechService = async (job) => {
             videoAnalysis: result
         })
 
+        // const youTubeUpload = await uploadToYouTube(videoPath);
         console.log(result)
 
         // Cleanup uploaded files

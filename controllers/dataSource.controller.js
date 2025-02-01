@@ -307,6 +307,7 @@ exports.getJobSeekerInfo = async (req, res) => {
                 { model: Certification },
                 { model: Skill },
                 { model: JobSeekerStat },
+                { model: Preference },
             ]
         });
         const test = await Testimonial.findAll({ where: { userId: req.user.id } });
@@ -472,7 +473,7 @@ exports.storePreferences = async (req, res) => {
 exports.storeFeedback = async (req, res) => {
     try {
         const { message } = req.body;
-        
+
         const feedback = await Feedback.create({
             userId: req.user.id,
             message,
@@ -510,6 +511,7 @@ function transformProfileInfo(profileInfo) {
         GithubUrl: profileInfo.ProfessionalInformation?.github || null,
         videoAnalysis: profileInfo.PersonalInformation?.videoAnalysis,
         testimonials: profileInfo.Testimonial,
+        preference: profileInfo.Preference,
         stats: {
             profileViews: profileInfo.JobSeekerStat?.profileViews || 0,
             searchAppearance: profileInfo.JobSeekerStat?.searchAppearance || 0,
@@ -543,6 +545,7 @@ function transformProfileInfo(profileInfo) {
             name: skill.name,
             proficiency: skill.proficiency,
             updatedAt: skill.updatedAt
-        }))
+        })),
+
     };
 }

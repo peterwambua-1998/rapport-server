@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const { Op } = require("sequelize");
 const { sendEmail } = require("../services/email.service");
 const bcrypt = require("bcrypt");
+const { google } = require("googleapis");
 
 // Registration for recruiters
 exports.register = async (req, res) => {
@@ -61,8 +62,6 @@ exports.register = async (req, res) => {
   }
 };
 
-
-
 exports.registerJobseeker = async (req, res) => {
   try {
     const { fName, mName, lName, email, phone, password } = req.body;
@@ -93,7 +92,7 @@ exports.registerJobseeker = async (req, res) => {
       isVerified: false,
     });
 
-    
+
 
     await sendEmail(user.email, "registration", {
       name: user.fName,
@@ -296,123 +295,36 @@ exports.getCurrentUser = async (req, res) => {
   return res.json({ user: req.user });
 }
 
-// Registration for jobseekers
-// exports.registerJobseeker = async (req, res) => {
-//   try {
-//     const {
-//       fullName,
-//       email,
-//       phone,
-//       address,
-//       city,
-//       state,
-//       zipCode,
-//       professionalTitle,
-//       industry,
-//       educationLevel,
-//       yearsOfExperience,
-//       skillLevel,
-//       skills,
-//       aboutYourself,
-//       termsAccepted,
-//       ioUserId, // represent user id from socket
-//     } = req.body;
+exports.youTubeAuthorization = async (req, res) => {
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET,
+      process.env.YOUTUBE_REDIRECT_URI
+    );
 
-//     const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
-//     const password = "password123";
-//     const files = req.files;
-//     let video_path, video_name;
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      scope: ['https://www.googleapis.com/auth/youtube.upload']
+    });
 
-//     // Check for existing user
-//     const existingUser = await User.findOne({ where: { email } });
-//     if (existingUser) {
-//       return res.status(400).json({ error: "Email already in use" });
-//     }
+    res.redirect(authUrl);
+  } catch (error) {
+    console.log(error)
+    res.redirect('http://localhost:5173/admin/dashboard');
+  }
+}
 
-//     const existingPhone = await JobSeeker.findOne({ where: { phone } });
-//     if (existingPhone) {
-//       return res.status(400).json({ error: "Phone already in use" });
-//     }
-
-//     if (files) {
-//       profile_path = files.profilePicture ? files.profilePicture[0].path : "";
-//     }
-
-//     const user = await User.create({
-//       name: fullName,
-//       email,
-//       password,
-//       role: "job_seeker",
-//       verificationToken,
-//       isVerified: false,
-//       avatar: profile_path
-//     });
-
-//     let vid = {
-//       "analysis": "",
-//       "highlights": [],
-//       "keywords and expertise": [],
-//       "strengths": [],
-//       "soft skills": [],
-//       "experiences": []
-//     }
-
-//     if (files) {
-//       if (files.video) {
-//         video_name = files.video[0].filename;
-//         video_path = files.video[0].path;
-//       }
-//     }
-
-//     await JobSeeker.create({
-//       userId: user.id,
-//       fullName,
-//       phone,
-//       professionalTitle,
-//       address,
-//       city,
-//       state,
-//       zipCode,
-//       industry,
-//       educationLevel,
-//       yearsOfExperience,
-//       skillLevel,
-//       about: aboutYourself,
-//       videoUrl: video_path,
-//       videoAnalysis: vid,
-//       backgroundColor: "#205295",
-//       terms: termsAccepted ? termsAccepted : false,
-//     });
-
-//     if (files) {
-//       if (files.video) {
-//         await addSpeechToQueue({ videoPath: video_path, fileName: video_name, userId: user.id, ioUserId, router: 'register' });
-//       }
-//     }
-
-//     let skillSet = JSON.parse(skills);
-//     const skillsToInsert = skillSet.map((skill) => ({
-//       userId: user.id,
-//       skillId: skill.id,
-//     }));
-
-//     await JobseekerSkills.bulkCreate(skillsToInsert, {
-//       ignoreDuplicates: true,
-//     });
-
-//     await sendEmail(user.email, "registration", {
-//       name: user.name,
-//       verificationLink: verificationToken,
-//     });
-
-//     res
-//       .json({ status: true, msg: "registration successful", user: user })
-//       .status(200);
-//   } catch (error) {
-//     res
-//       .status(400)
-//       .json({ success: false, error: "Error occured please try again!!!" });
-//   }
-// };
-
-// Forgot Password
+exports.youTubeCallback = async (req, res) => {
+  try {
+      const { code } = req.query;
+      const { tokens } = await oauth2Client.getToken(code);
+      console.log(tokens);
+      oauth2Client.setCredentials(tokens);
+      
+      // Save tokens to a secure storage in production
+      res.redirect('/upload');
+  } catch (error) {
+      errorHandler(error, req, res);
+  }
+}
