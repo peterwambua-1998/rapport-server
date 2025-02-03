@@ -23,6 +23,7 @@ const emailConfiguration = require('./emailConfiguration.routes');
 const emailTemplate = require('./emailTemplate.routes');
 const profileVisibility = require('./profileVisibility.routes');
 const testimonial = require('./testimonial.routes');
+const { youTubeCallback } = require("../controllers/auth.controller");
 
 router.use("/skill-levels", skillLevelRoutes);
 router.use("/years-of-experience", yearsOfExperienceRoutes);
@@ -52,6 +53,6 @@ router.get("/", (req, res) => {
   res.send("Hello World");
 });
 
-// router.get('/youtube/oauth2callback', )
+router.get('/youtube/oauth2callback', youTubeCallback)
 
 module.exports = router;

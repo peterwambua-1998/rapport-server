@@ -14,11 +14,19 @@ const { StructuredOutputParser } = require('@langchain/core/output_parsers')
 const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
-const { google } = require('googleapis')
+const { google } = require('googleapis');
+const TokenManager = require('./tokenManager.service');
 
-const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json'; // Replace with your service account JSON file path
-// 
+const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json';
 process.env.GOOGLE_APPLICATION_CREDENTIALS = gcCredentialsPath;
+
+const oauth2Client = new google.auth.OAuth2(
+    process.env.YOUTUBE_CLIENT_ID,
+    process.env.YOUTUBE_CLIENT_SECRET,
+    process.env.YOUTUBE_REDIRECT_URI
+);
+
+const tokenManager = new TokenManager();
 
 const storage = new Storage();
 const speechClient = new speech.SpeechClient();
@@ -38,7 +46,6 @@ const addSpeechToQueue = async (speech) => {
 
         sendMessageIo(userId, 'video-status-update', { status: 'Queue storage', percentage: 5, error: null });
 
-
         return job;
     } catch (error) {
         console.error('Error adding job to queue:', error);
@@ -46,15 +53,42 @@ const addSpeechToQueue = async (speech) => {
     }
 };
 
-const uploadToYouTube = async (videoPath) => {
+const checkAuth = async () => {
     try {
+        const tokens = await tokenManager.getToken();
+        // if (!tokens) {
+        //     return res.redirect('/api/auth/youtube/authorize');
+        // }
+
+        // Check if token needs refresh (5 minutes buffer)
+        if (tokens.expiry_date - Date.now() < 300000) {
+            oauth2Client.setCredentials(tokens);
+            const { credentials } = await oauth2Client.refreshAccessToken();
+            await tokenManager.saveToken(credentials);
+            oauth2Client.setCredentials(credentials);
+        } else {
+            oauth2Client.setCredentials(tokens);
+        }
+
+        return true;
+    } catch (error) {
+        console.log(error);
+        return false;
+    }
+};
+
+const uploadToYouTube = async (videoPath, fileName) => {
+    try {
+        await checkAuth();
+
+        // YouTube service initialization
         const youtube = google.youtube({
             version: 'v3',
-            auth: "AIzaSyCRyGPrquCiuqmOYlUnd7k3DhI3iYUDdjg"
+            auth: oauth2Client
         });
-        console.log(process.env.YOUTUBE_API_KEY)
-        let title = 'Default Title';
-        let description = 'Default Description';
+        
+        let title = fileName;
+        let description = 'Profile video for job seeker';
         let privacyStatus = 'private';
 
         const videoMetadata = {
@@ -255,8 +289,7 @@ const speechService = async (job) => {
             videoAnalysis: result
         })
 
-        // const youTubeUpload = await uploadToYouTube(videoPath);
-        console.log(result)
+        const youTubeUpload = await uploadToYouTube(videoPath, fileName);
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);
@@ -269,7 +302,6 @@ const speechService = async (job) => {
         throw error;
     }
 }
-
 
 speechQueue.process(speechService)
 

@@ -3,12 +3,14 @@ const {
   RecruiterProfile,
   JobSeeker,
   JobSeekerStat,
+  AdminToken,
 } = require("../models");
 const crypto = require("crypto");
 const { Op } = require("sequelize");
 const { sendEmail } = require("../services/email.service");
 const bcrypt = require("bcrypt");
 const { google } = require("googleapis");
+const TokenManager = require("../services/tokenManager.service");
 
 // Registration for recruiters
 exports.register = async (req, res) => {
@@ -317,14 +319,39 @@ exports.youTubeAuthorization = async (req, res) => {
 
 exports.youTubeCallback = async (req, res) => {
   try {
-      const { code } = req.query;
-      const { tokens } = await oauth2Client.getToken(code);
-      console.log(tokens);
-      oauth2Client.setCredentials(tokens);
-      
-      // Save tokens to a secure storage in production
-      res.redirect('/upload');
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET,
+      process.env.YOUTUBE_REDIRECT_URI
+    );
+
+    const { code } = req.query;
+    const { tokens } = await oauth2Client.getToken(code);
+
+    oauth2Client.setCredentials(tokens);
+
+    const tokenManager = new TokenManager();
+    await tokenManager.saveToken(tokens);
+    // Save tokens to a secure storage in production
+    res.redirect(`${process.env.FRONTEND_URL}/admin/youtube/authorization?valid=true`);
   } catch (error) {
-      errorHandler(error, req, res);
+    console.log(error)
+    res.redirect(`${process.env.FRONTEND_URL}/admin/youtube/authorization?valid=false`);
+  }
+}
+
+exports.checkYouTube = async (req, res) => {
+  try {
+    const tokenRecord = await AdminToken.findOne({ where: { id: 1 } });
+    if (tokenRecord) {
+      return res.json({status: true, message: '"YouTube account found.'});
+    }
+    return res
+      .status(404)
+      .json({ status: false, error: "YouTube account not found." });
+  } catch (error) {
+    return res
+      .status(404)
+      .json({ status: false, error: "YouTube account not found." });
   }
 }

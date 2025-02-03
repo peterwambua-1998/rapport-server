@@ -12,6 +12,7 @@ const {
   getCurrentUser,
   resendVerification,
   youTubeAuthorization,
+  checkYouTube,
 } = require("../controllers/auth.controller");
 const { processFile, storeProfessionalInfo, storePersonalInfo, storeEducation, storeExperience, storeCerts, storeSkills, getJobSeekerInfo, callBackLinkedInd, handleLinkedIn } = require("../controllers/dataSource.controller")
 const uploadImagesMiddleware = require("../middleware/jobseekerMiddleware");
@@ -27,11 +28,12 @@ router.post('/professional-info/store', storeProfessionalInfo);
 router.post('/personal-info/store', uploadImagesMiddleware, storePersonalInfo);
 router.post('/education-info/store', storeEducation);
 router.post('/experience-info/store', storeExperience)
-router.post('/cert-info/store', storeCerts)
-router.post('/skills-info/store', storeSkills)
-router.get('/profile/job-seeker', getJobSeekerInfo)
-router.get('/data-source/linkedin/callback', callBackLinkedInd)
-router.get('/youtube/authorize', youTubeAuthorization)
+router.post('/cert-info/store', storeCerts);
+router.post('/skills-info/store', storeSkills);
+router.get('/profile/job-seeker', getJobSeekerInfo);
+router.get('/data-source/linkedin/callback', callBackLinkedInd);
+router.get('/youtube/authorize', youTubeAuthorization);
+router.get('/check/youtube', checkYouTube);
 
 router.get("/me", getCurrentUser);
 
