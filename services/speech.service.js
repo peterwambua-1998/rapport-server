@@ -294,7 +294,7 @@ const speechService = async (job) => {
             videoAnalysis: result
         })
 
-        const youTubeUpload = await uploadToYouTube(videoPath, fileName);
+        // const youTubeUpload = await uploadToYouTube(videoPath, fileName);
 
         // Cleanup uploaded files
         fs.unlinkSync(audioPath);
