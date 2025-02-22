@@ -19,9 +19,8 @@ module.exports = (sequelize, DataTypes) => {
   Interview.init({
     userId: DataTypes.UUID,
     video: DataTypes.STRING,
-    feedback: DataTypes.TEXT,
     grade: DataTypes.INTEGER,
-    questions: DataTypes.TEXT,
+    videoAnalysis: DataTypes.JSON,
   }, {
     sequelize,
     modelName: 'Interview',

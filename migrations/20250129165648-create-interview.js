@@ -15,14 +15,11 @@ module.exports = {
       video: {
         type: Sequelize.STRING
       },
-      feedback: {
-        type: Sequelize.TEXT
-      },
       grade: {
         type: Sequelize.INTEGER
       },
-      questions: {
-        type: Sequelize.TEXT
+      videoAnalysis: {
+        type: Sequelize.JSON,
       },
       createdAt: {
         allowNull: false,

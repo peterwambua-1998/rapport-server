@@ -5,9 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const OpenAI = require("openai");
-const {
-    PersonalInformation
-} = require("../models");
+const { GoogleAuth } = require('google-auth-library');
+const { VertexAI } = require('@langchain/google-vertexai');
+const { PersonalInformation } = require("../models");
 const { sendMessageIo } = require('./socket.service');
 const { z } = require('zod');
 const { StructuredOutputParser } = require('@langchain/core/output_parsers')
@@ -19,6 +19,7 @@ const TokenManager = require('./tokenManager.service');
 
 const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json';
 process.env.GOOGLE_APPLICATION_CREDENTIALS = gcCredentialsPath;
+process.env.GOOGLE_API_KEY = '';
 
 const oauth2Client = new google.auth.OAuth2(
     process.env.YOUTUBE_CLIENT_ID,
@@ -86,7 +87,7 @@ const uploadToYouTube = async (videoPath, fileName) => {
             version: 'v3',
             auth: oauth2Client
         });
-        
+
         let title = fileName;
         let description = 'Profile video for job seeker';
         let privacyStatus = 'private';
@@ -220,11 +221,15 @@ const vertexExtractInfo = async (transcription, userId) => {
 
         const parser = StructuredOutputParser.fromZodSchema(videoSchema);
 
-        const model = new ChatOpenAI({
-            model: "gpt-4o-mini",
+        const model = new VertexAI({
+            // authOptions:{
+            //     clientOptions: oauth2Client
+            // },
+            project: process.env.GOOGLE_CLOUD_PROJECT,
+            model: "gemini-1.5-flash",
             temperature: 0,
-            apiKey: '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',
-        });
+            maxRetries: 2,
+        })
 
         const formatInstructions = parser.getFormatInstructions();
 

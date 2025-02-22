@@ -103,8 +103,14 @@ async function transcribeAudio(gcsUri, userId) {
 const vertexExtractInfo = async (transcription, userId, qtns) => {
     try {
         const interviewResults = z.object({
-            grade: z.number().min(0).max(100).describe('How well the questions were answered on a scale of 0 to 100'),
-            feedback: z.string().describe('Ways to improve'),
+            results: z.array(
+                z.object({
+                    question: z.string().describe("The specific question that was evaluated"),
+                    grade: z.number().min(0).max(100).describe("Score for this question"),
+                    feedback: z.string().describe("Specific feedback for this question"),
+                })
+            ).describe("Array of question evaluation results"),
+            overallGrade: z.number().min(0).max(100).describe("Overall score across all questions"),
         });
 
         const parser = StructuredOutputParser.fromZodSchema(interviewResults);
@@ -119,28 +125,35 @@ const vertexExtractInfo = async (transcription, userId, qtns) => {
 
         const prompt = new PromptTemplate({
             template: `
-            You are an expert at marking questions, where questions are answered using a single text. 
-            There are multiple questions separated by a comma.
-            Please analyze the following text and determine the result.
-            
-            Make sure to:
-            1. Provide a grade
-            2. feedback how user can improve
-            
+            You are an expert interviewer analyzing questions response based on the response transcript. Evaluate each question separately and search for answer in the given transcript.
+            The transcription contains answers to all questions.
+
+            INSTRUCTIONS:
+            1. Analyze each question individually
+            2. For EACH question:
+               - Grade the answer quality (0-100)
+               - Provide specific feedback for improvement
+            3. Calculate an overall grade considering all answers
+
+            Format the output as specified below.
+
             {format_instructions}
-            
-            Questions: {questions}
-            Text: {text}
-          
-            Extracted Information:`,
+
+            QUESTIONS:
+            {questions}
+
+            RESPONSE TRANSCRIPT:
+            {text}
+
+            EVALUATION RESULTS:`,
             inputVariables: ["text", "questions"],
             partialVariables: { format_instructions: formatInstructions },
         });
 
-        const input = await prompt.format({
-            questions: qtns,
-            text: transcription,
-        });
+        
+        const formattedQuestions = qtns
+            .map((q, i) => `${i + 1}. ${q}`)
+            .join('\n');
 
         const chain = RunnableSequence.from([
             prompt,
@@ -149,7 +162,7 @@ const vertexExtractInfo = async (transcription, userId, qtns) => {
         ]);
 
         const response = await chain.invoke({
-            questions: qtns,
+            questions: formattedQuestions,
             text: transcription
         })
 
@@ -174,13 +187,14 @@ const speechService = async (job) => {
         const transcription = await transcribeAudio(gcsUri, userId);
 
         const result = await vertexExtractInfo(transcription, userId, questions);
+        console.log('typeof result======');
+        console.log(typeof result);
 
         await Interview.create({
             userId: userId,
             video: videoPath,
-            feedback: result.feedback,
-            grade: result.grade,
-            questions: questions
+            grade: result.overallGrade,
+            videoAnalysis: result
         });
 
         const stats = await JobSeekerStat.findOne({ where: { userId: userId } });

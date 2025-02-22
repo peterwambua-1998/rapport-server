@@ -44,11 +44,20 @@ class TokenManager {
         const encrypted = this.encrypt(JSON.stringify(tokens));
 
         try {
+            // await AdminToken.upsert({
+            //     encryptedToken: encrypted.encryptedData,
+            //     iv: encrypted.iv,
+            //     authTag: encrypted.authTag,
+            //     expiresAt: new Date(tokens.expiry_date)
+            // });
             await AdminToken.upsert({
+                id: 1, // Explicitly set the ID
                 encryptedToken: encrypted.encryptedData,
                 iv: encrypted.iv,
                 authTag: encrypted.authTag,
                 expiresAt: new Date(tokens.expiry_date)
+            }, {
+                where: { id: 1 }
             });
         } catch (error) {
             console.error('Error saving token:', error);

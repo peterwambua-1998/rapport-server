@@ -13,9 +13,11 @@ exports.getQuestions = async (req, res, next) => {
         { model: Skill },
       ]
     });
-
+    console.log(query)
     // get questions
     const result = await generateQuestions(query);
+    console.log(result);
+    
 
     return res.json(result);
   } catch (error) {
@@ -37,7 +39,7 @@ exports.storeQuestions = async (req, res, next) => {
     const video_path = files.video[0].path;
 
     const questions = JSON.parse(req.body.questions || '[]')
-    let format_qtn = questions.join();
+    let format_qtn = questions;
 
 
     await addQuestionsToQueue({ videoPath: video_path, fileName: video_name, userId: req.user.id, router: 'register', questions: format_qtn });

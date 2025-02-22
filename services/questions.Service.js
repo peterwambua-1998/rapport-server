@@ -50,7 +50,7 @@ exports.generateQuestions = async (profileInfo) => {
         const response = await chain.invoke({
             profile: input
         });
-
+        
         return response;
     } catch (error) {
         return [];
