@@ -27,3 +27,4 @@ dist-ssr
 *uploads/*
 .env
 client_secrets.json
+jsconfig.json

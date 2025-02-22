@@ -142,6 +142,23 @@ exports.storePersonalInfo = async (req, res) => {
             }
         }
 
+        const preferences = await Preference.findOne({ where: { userId: userId } })
+
+        if (!preferences) {
+            await Preference.create({
+                userId,
+                profileVisible: true,
+                activeStatus: true,
+                bgColor: '#c3dac4',
+                skills: true,
+                education: true,
+                experience: true,
+                profInfo: true,
+                careerGoals: true,
+                recruiterViewsProfile: true,
+            })
+        }
+
         const infoExists = await PersonalInformation.findOne({ where: { userId: userId } });
 
         if (infoExists) {
