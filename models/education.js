@@ -20,8 +20,14 @@ module.exports = (sequelize, DataTypes) => {
     school: DataTypes.STRING,
     degree: DataTypes.STRING,
     major: DataTypes.STRING,
-    startDate: DataTypes.DATE,
-    endDate: DataTypes.DATE,
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     userId: DataTypes.UUID
   }, {
     sequelize,

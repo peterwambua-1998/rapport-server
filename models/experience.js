@@ -20,8 +20,14 @@ module.exports = (sequelize, DataTypes) => {
     position: DataTypes.STRING,
     employer: DataTypes.STRING,
     description: DataTypes.TEXT,
-    startDate: DataTypes.DATE,
-    endDate: DataTypes.DATE,
+    startDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
+    endDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+    },
     currentlyWorking: DataTypes.BOOLEAN,
     userId: DataTypes.UUID
   }, {
