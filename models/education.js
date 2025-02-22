@@ -22,11 +22,11 @@ module.exports = (sequelize, DataTypes) => {
     major: DataTypes.STRING,
     startDate: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     endDate: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     userId: DataTypes.UUID
   }, {

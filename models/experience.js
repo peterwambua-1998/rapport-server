@@ -22,11 +22,11 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.TEXT,
     startDate: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     endDate: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
     },
     currentlyWorking: DataTypes.BOOLEAN,
     userId: DataTypes.UUID
