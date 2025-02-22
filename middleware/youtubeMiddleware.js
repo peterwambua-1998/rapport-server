@@ -12,20 +12,20 @@ const checkAuth = async (req, res, next) => {
         const tokenManager = new TokenManager();
         const tokens = await tokenManager.getToken();
 
-        if (!tokens) {
+        if (tokens.tokenRec == null) {
             return res.redirect('/api/auth/youtube/authorize');
         }
-
         // Check if token needs refresh (5 minutes buffer)
-        if (tokens.expiry_date - Date.now() < 300000) {
-            oauth2Client.setCredentials(tokens);
+        console.log('Youtube middleware');
+        console.log(tokens.tokenRec.expiresAt - Date.now() < 300000);
+        
+        if (tokens.tokenRec.expiresAt - Date.now() < 300000) {
+            oauth2Client.setCredentials(tokens.encryptedData);
             const { credentials } = await oauth2Client.refreshAccessToken();
-            
-
             await tokenManager.saveToken(credentials);
             oauth2Client.setCredentials(credentials);
         } else {
-            oauth2Client.setCredentials(tokens);
+            oauth2Client.setCredentials(tokens.encryptedData);
         }
 
         next();

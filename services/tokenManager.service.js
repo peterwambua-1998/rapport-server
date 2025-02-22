@@ -69,15 +69,15 @@ class TokenManager {
         try {
             const tokenRecord = await AdminToken.findOne({ where: { id: 1 } });
 
-            if (!tokenRecord) return null;
+            if (!tokenRecord) return {encryptedData: null, tokenRec: null};
 
             const decrypted = this.decrypt(
                 tokenRecord.encryptedToken,
                 tokenRecord.iv,
-                tokenRecord.authTag
+                tokenRecord.authTag,
             );
 
-            return JSON.parse(decrypted);
+            return {encryptedData: JSON.parse(decrypted), tokenRec: tokenRecord};
         } catch (error) {
             console.error('Error retrieving token:', error);
             throw new Error('Failed to retrieve token');
