@@ -4,9 +4,8 @@ const speech = require('@google-cloud/speech');
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const OpenAI = require("openai");
-const { GoogleAuth } = require('google-auth-library');
-const { VertexAI } = require('@langchain/google-vertexai');
+// const { GoogleAuth } = require('google-auth-library');
+// const { VertexAI } = require('@langchain/google-vertexai');
 const { PersonalInformation } = require("../models");
 const { sendMessageIo } = require('./socket.service');
 const { z } = require('zod');
@@ -15,19 +14,19 @@ const { ChatOpenAI } = require('@langchain/openai');
 const { PromptTemplate } = require('@langchain/core/prompts')
 const { RunnableSequence } = require('@langchain/core/runnables');
 const { google } = require('googleapis');
-const TokenManager = require('./tokenManager.service');
+// const TokenManager = require('./tokenManager.service');
 
 const gcCredentialsPath = process.cwd() + '/ai-app-49d1e-a7f07b6af0e2.json';
 process.env.GOOGLE_APPLICATION_CREDENTIALS = gcCredentialsPath;
 process.env.GOOGLE_API_KEY = '';
 
-const oauth2Client = new google.auth.OAuth2(
-    process.env.YOUTUBE_CLIENT_ID,
-    process.env.YOUTUBE_CLIENT_SECRET,
-    process.env.YOUTUBE_REDIRECT_URI
-);
+// const oauth2Client = new google.auth.OAuth2(
+//     process.env.YOUTUBE_CLIENT_ID,
+//     process.env.YOUTUBE_CLIENT_SECRET,
+//     process.env.YOUTUBE_REDIRECT_URI
+// );
 
-const tokenManager = new TokenManager();
+// const tokenManager = new TokenManager();
 
 const storage = new Storage();
 const speechClient = new speech.SpeechClient();
@@ -54,71 +53,71 @@ const addSpeechToQueue = async (speech) => {
     }
 };
 
-const checkAuth = async () => {
-    try {
-        const tokens = await tokenManager.getToken();
-        // if (!tokens) {
-        //     return res.redirect('/api/auth/youtube/authorize');
-        // }
+// const checkAuth = async () => {
+//     try {
+//         const tokens = await tokenManager.getToken();
+//         // if (!tokens) {
+//         //     return res.redirect('/api/auth/youtube/authorize');
+//         // }
 
-        // Check if token needs refresh (5 minutes buffer)
-        if (tokens.expiry_date - Date.now() < 300000) {
-            oauth2Client.setCredentials(tokens);
-            const { credentials } = await oauth2Client.refreshAccessToken();
-            await tokenManager.saveToken(credentials);
-            oauth2Client.setCredentials(credentials);
-        } else {
-            oauth2Client.setCredentials(tokens);
-        }
+//         // Check if token needs refresh (5 minutes buffer)
+//         if (tokens.expiry_date - Date.now() < 300000) {
+//             oauth2Client.setCredentials(tokens);
+//             const { credentials } = await oauth2Client.refreshAccessToken();
+//             await tokenManager.saveToken(credentials);
+//             oauth2Client.setCredentials(credentials);
+//         } else {
+//             oauth2Client.setCredentials(tokens);
+//         }
 
-        return true;
-    } catch (error) {
-        console.log(error);
-        return false;
-    }
-};
+//         return true;
+//     } catch (error) {
+//         console.log(error);
+//         return false;
+//     }
+// };
 
-const uploadToYouTube = async (videoPath, fileName) => {
-    try {
-        await checkAuth();
+// const uploadToYouTube = async (videoPath, fileName) => {
+//     try {
+//         await checkAuth();
 
-        // YouTube service initialization
-        const youtube = google.youtube({
-            version: 'v3',
-            auth: oauth2Client
-        });
+//         // YouTube service initialization
+//         const youtube = google.youtube({
+//             version: 'v3',
+//             auth: oauth2Client
+//         });
 
-        let title = fileName;
-        let description = 'Profile video for job seeker';
-        let privacyStatus = 'private';
+//         let title = fileName;
+//         let description = 'Profile video for job seeker';
+//         let privacyStatus = 'private';
 
-        const videoMetadata = {
-            snippet: {
-                title,
-                description,
-                categoryId: '22' // Category ID for "People & Blogs"
-            },
-            status: {
-                privacyStatus
-            }
-        };
+//         const videoMetadata = {
+//             snippet: {
+//                 title,
+//                 description,
+//                 categoryId: '22' // Category ID for "People & Blogs"
+//             },
+//             status: {
+//                 privacyStatus
+//             }
+//         };
 
-        const media = {
-            body: fs.createReadStream(videoPath)
-        };
+//         const media = {
+//             body: fs.createReadStream(videoPath)
+//         };
 
-        const response = await youtube.videos.insert({
-            part: ['snippet', 'status'],
-            requestBody: videoMetadata,
-            media: media,
-        });
+//         const response = await youtube.videos.insert({
+//             part: ['snippet', 'status'],
+//             requestBody: videoMetadata,
+//             media: media,
+//         });
 
-        return response;
-    } catch (error) {
-        console.error('YouTube error', error);
-        throw error;
-    }
-}
+//         return response;
+//     } catch (error) {
+//         console.error('YouTube error', error);
+//         throw error;
+//     }
+// }
 
 function extractAudio(videoPath, audioPath, userId) {
     return new Promise((resolve, reject) => {
@@ -221,15 +220,18 @@ const vertexExtractInfo = async (transcription, userId) => {
 
         const parser = StructuredOutputParser.fromZodSchema(videoSchema);
 
-        const model = new VertexAI({
-            // authOptions:{
-            //     clientOptions: oauth2Client
-            // },
-            project: process.env.GOOGLE_CLOUD_PROJECT,
-            model: "gemini-1.5-flash",
+        // const model = new VertexAI({
+        //     project: process.env.GOOGLE_CLOUD_PROJECT,
+        //     model: "gemini-1.5-flash",
+        //     temperature: 0,
+        //     maxRetries: 2,
+        // })
+
+        const model = new ChatOpenAI({
+            model: "gpt-4o-mini",
             temperature: 0,
-            maxRetries: 2,
-        })
+            apiKey: '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',
+        });
 
         const formatInstructions = parser.getFormatInstructions();
 
