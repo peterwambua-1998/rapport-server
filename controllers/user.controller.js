@@ -176,7 +176,7 @@ exports.profile = async (req, res) => {
     return res.status(200).json(data);
   } catch (error) {
     console.error("Error fetching recruiter profiles:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(404).json({ msg: "Profile not found!" });
   }
 };
 
@@ -541,7 +541,7 @@ exports.getJobSeekerById = async (req, res) => {
     });
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(404).json({ msg: "Profile not found" });
   }
 }
 
